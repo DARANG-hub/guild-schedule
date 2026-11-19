@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+    function small() { return request.resource.data.size() <= 12; }
+
+    match /guilds/{guild} {
+      // 캐릭터 정보: 본인 것만 수정
+      match /members/{uid} {
+        allow read: if signedIn();
+        allow write: if signedIn() && uid == me() && small()
+                     && request.resource.data.uid == me()
+                     && request.resource.data.name is string && request.resource.data.name.size() <= 20;
+      }
+      // 파티: 누구나 만들기, 만든 사람만 삭제
+      match /events/{id} {
+        allow read: if signedIn();
+        allow create: if signedIn() && small() && request.resource.data.by == me()
+                      && request.resource.data.date is string && request.resource.data.max is number;
+        allow update, delete: if signedIn() && resource.data.by == me();
+      }
+      // 참여: 본인 참여만 추가/취소, 삭제된 파티의 참여 기록은 누구나 정리
+      match /joins/{id} {
+        allow read: if signedIn();
+        allow create, update: if signedIn() && small() && request.resource.data.uid == me()
+                              && id == request.resource.data.eventId + '__' + me();
+        allow delete: if signedIn() && (resource.data.uid == me()
+                      || !exists(/databases/$(database)/documents/guilds/$(guild)/events/$(resource.data.eventId)));
+      }
+      // 댓글: 본인 댓글만 작성/삭제
+      match /comments/{id} {
+        allow read: if signedIn();
+        allow create: if signedIn() && small() && request.resource.data.uid == me()
+                      && request.resource.data.text is string && request.resource.data.text.size() <= 300;
+        allow delete: if signedIn() && resource.data.uid == me();
+      }
+    }
+  }
+}
