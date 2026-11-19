@@ -383,6 +383,18 @@ header .swords{width:30px;height:30px;vertical-align:-6px;margin-right:4px;filte
 .theme-a .dc.sel,.theme-a .dc.sel.mine{background-size:15px,auto!important;background-position:right 3px top 4px,0 0!important}
 
 /* ---- 주간 모집 ---- */
+.rlist{margin-top:10px;font-size:13px;background:var(--bg);border-radius:10px;padding:8px 10px}
+.rlist summary{cursor:pointer;font-weight:700;list-style:none}
+.rlist summary::-webkit-details-marker{display:none}
+.rlist summary::after{content:" ▾";color:var(--muted)}
+.rlist[open] summary::after{content:" ▴"}
+.rlist ul{list-style:none;margin:8px 0 0;padding:0}
+.rlist li{padding:6px 0;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline}
+.rlist li:first-child{border-top:0}
+.rlist .rd{color:var(--accent);font-weight:700;font-size:12px}
+.rlist small{flex-basis:100%;color:var(--muted);font-size:12px}
+.theme-a .rlist{background:rgba(255,255,255,.55)}
+
 .round .rhead{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
 .round .rhead b{font-size:15px}
 .round .rhead small{color:var(--muted);font-size:12px}
@@ -955,6 +967,10 @@ function renderRound(){
     <span class="w">${WDK[d.wd]}</span><span class="dt">${sd(d.d)}</span><span class="c">${cnt[i]}</span></button>`).join('')}</div>`;
   if(S.rsel!=null){const d=days[S.rsel];const who=as.filter(a=>(a.days||[]).includes(S.rsel));
     h+=`<div class="rwho"><b>${WDK[d.wd]} ${sd(d.d)}</b> · ${who.length}명${who.length?`<ul>${who.map(a=>`<li>${esc(nameOf(a.uid))}${a.memo?` <small>${esc(a.memo)}</small>`:''}</li>`).join('')}</ul>`:'<p class="hint" style="margin:4px 0 0">가능한 사람이 없어요</p>'}</div>`}
+  if(as.length){
+    h+=`<details class="rlist" ${S.rlistOpen?'open':''}><summary data-act="rlist">✍️ 답변한 사람 ${as.length}명</summary><ul>${as.map(a=>{const ds=days.filter(d=>(a.days||[]).includes(d.off)).map(d=>WDK[d.wd]);
+      return `<li><b>${esc(nameOf(a.uid))}</b><span class="rd">${ds.length===7?'매일':ds.length?ds.join('·'):'이번엔 어려워요'}</span>${a.memo?`<small>${esc(a.memo)}</small>`:''}</li>`}).join('')}</ul></details>`;
+  }
   h+=`<div class="rmeta">응답 ${as.length}명`;
   if(S.isOwner){const ids=new Set(as.map(a=>a.uid));const no=Object.values(S.members).filter(m=>m.name&&!ids.has(m.uid));if(no.length&&open)h+=` · <span class="muted">미응답: ${no.map(m=>esc(m.name)).join(', ')}</span>`}
   h+=`</div>`;
@@ -1221,6 +1237,7 @@ document.addEventListener('click',async e=>{
       if(delArm!=='r:'+el.dataset.id){delArm='r:'+el.dataset.id;el.textContent='한 번 더 누르면 지워요';setTimeout(()=>{if(delArm==='r:'+el.dataset.id){delArm=null;render()}},3000);return}
       delArm=null;const id=el.dataset.id;
       if(await guard(S.db.collection('rounds').doc(safe(id)).delete(),'지웠어요')){for(const a of S.answers.filter(a=>a.roundId===id)){try{await S.db.collection('answers').doc(a._id).delete()}catch(_){}}S.rounds=S.rounds.filter(r=>r.id!==id);render()}break}
+    case'rlist':{e.preventDefault();S.rlistOpen=!S.rlistOpen;render();break}
     case'rday':{const o=+el.dataset.o;S.rsel=S.rsel===o?null:o;render();break}
     case'ans':if(writable())needName(openAnswer);break;
     case'an-day':{const o=+el.dataset.o;AN.touched=true;AN.days.has(o)?AN.days.delete(o):AN.days.add(o);AN.redraw&&AN.redraw();break}
