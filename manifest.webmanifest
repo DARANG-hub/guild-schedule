@@ -1,16 +1,29 @@
 {
-  "name": "길드 사냥 일정",
-  "short_name": "길드 일정",
-  "description": "글렌 베르나 · 브리레흐 파티 모집 캘린더",
+  "name": "Selene",
+  "short_name": "Selene",
+  "description": "Selene 길드 · 글렌 베르나 · 브리레흐 파티 모집",
   "lang": "ko",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f5efe3",
-  "theme_color": "#2f6f62",
+  "background_color": "#2b3a92",
+  "theme_color": "#2b3a92",
   "icons": [
-    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
-    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
-    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }
