@@ -161,6 +161,56 @@ nav.tabs button.on{color:var(--accent);font-weight:700}
 </style>
 </head>
 <body>
+<!-- 로딩 화면 -->
+<style>
+#splash{position:fixed;inset:0;z-index:100;overflow:hidden;background:#3f63c4;transition:opacity .45s ease}
+#splash.hide{opacity:0;pointer-events:none}
+.sp-stage{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);aspect-ratio:var(--ar);width:max(100vw,calc(100vh * var(--ar)))}
+@supports (height:100dvh){.sp-stage{width:max(100vw,calc(100dvh * var(--ar)))}}
+.sp-stage img{position:absolute;inset:0;width:100%;height:100%;display:block}
+.sp-track{position:absolute;left:var(--tl);top:var(--tt);width:var(--tw);height:var(--th)}
+.sp-fill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:999px;
+  background:linear-gradient(90deg,#8fdcff 0%,#c9f1ff 55%,#ffffff 100%);
+  box-shadow:0 0 6px rgba(200,240,255,.9),0 0 14px rgba(170,220,255,.6)}
+.sp-knob{position:absolute;top:50%;left:0;width:var(--kw);aspect-ratio:1;transform:translate(-50%,-50%);filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px rgba(200,180,255,.8))}
+.sp-knob svg{width:100%;height:100%;display:block}
+</style>
+<div id="splash"><div class="sp-stage" id="spStage"><img id="spImg" alt="">
+  <div class="sp-track"><div class="sp-fill" id="spFill"></div>
+    <div class="sp-knob" id="spKnob"><svg viewBox="0 0 100 100"><defs><mask id="spM"><rect width="100" height="100" fill="#fff"/><circle cx="64" cy="40" r="30" fill="#000"/></mask>
+      <linearGradient id="spG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e6dcff"/></linearGradient></defs>
+      <circle cx="48" cy="52" r="33" fill="url(#spG)" mask="url(#spM)" stroke="#b9a6ff" stroke-width="1.6"/>
+      <path d="M71 30 l2.6 -8 l2.6 8 l8 2.6 l-8 2.6 l-2.6 8 l-2.6 -8 l-8 -2.6z" fill="#fff"/></svg></div>
+  </div></div></div>
+<script>
+// 로딩 화면: 아이폰/안드로이드에 맞는 이미지와 게이지 위치
+(function(){
+  var ua=navigator.userAgent||'',ios=/iPhone|iPad|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  var C=ios?{src:'splash-ios.jpg',w:852,h:1846,t:[172,1311,678,1335],k:96}
+           :{src:'splash-android.jpg',w:941,h:1672,t:[187.3,1219.4,746.2,1245.9],k:106};
+  var st=document.getElementById('spStage'),p=function(v,b){return (v/b*100)+'%'};
+  st.style.setProperty('--ar',C.w+'/'+C.h);
+  st.style.setProperty('--tl',p(C.t[0],C.w));st.style.setProperty('--tt',p(C.t[1],C.h));
+  st.style.setProperty('--tw',p(C.t[2]-C.t[0],C.w));st.style.setProperty('--th',p(C.t[3]-C.t[1],C.h));
+  st.style.setProperty('--kw',(C.k/(C.t[2]-C.t[0])*100)+'%');
+  document.getElementById('spImg').src=C.src;
+  var fill=document.getElementById('spFill'),knob=document.getElementById('spKnob'),el=document.getElementById('splash');
+  var cur=0,tgt=6,cap=22,done=false,t0=Date.now(),MIN=1200,gone=false;
+  function draw(v){fill.style.width=v+'%';knob.style.left=v+'%'}
+  function tick(){
+    if(tgt<cap)tgt=Math.min(cap,tgt+0.06);      // 기다리는 동안에도 조금씩 차오름
+    cur+=(tgt-cur)*0.12;draw(cur);
+    if(done&&cur>99.3&&Date.now()-t0>=MIN){draw(100);if(!gone){gone=true;el.classList.add('hide');setTimeout(function(){el.remove()},500)}return}
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+  window.SPLASH={
+    step:function(v,next){if(v>tgt)tgt=v;if(next>cap)cap=next},   // v: 현재 단계, next: 다음 단계 전까지 최대
+    finish:function(){done=true;tgt=100;cap=100}
+  };
+  setTimeout(function(){window.SPLASH.finish()},12000); // 너무 오래 걸리면 그냥 넘어가기
+})();
+</script>
 <div class="wrap">
   <header>
     <h1>⚔️ 길드 사냥 일정<small>글렌 베르나 · 브리레흐 파티 모집</small></h1>
@@ -759,21 +809,23 @@ async function cleanupPast(){
 
 /* ---------- 시작 ---------- */
 (async()=>{try{
+  window.SPLASH&&SPLASH.step(25,42);
   render();
   const cfg=window.APP_CONFIG||{};
   if(!cfg.firebase||!cfg.firebase.apiKey||/여기/.test(cfg.firebase.apiKey)){
-    S.offline=true;S.offlineMsg='config.js에 Firebase 설정을 넣어야 해요. 설치 안내서의 3단계를 확인해주세요.';render();return}
+    S.offline=true;S.offlineMsg='config.js에 Firebase 설정을 넣어야 해요. 설치 안내서의 3단계를 확인해주세요.';render();window.SPLASH&&SPLASH.finish();return}
   const app=initializeApp(cfg.firebase);
   const auth=getAuth(app);AUTH=auth;EMAIL_DOMAIN=(cfg.firebase.projectId||'guild')+'.firebaseapp.com';S.browserOk=isStandalone()||browserFlag();
   let fs;try{fs=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})})}catch(_){fs=getFirestore(app)}
   if(auth.authStateReady)await auth.authStateReady();
   if(!auth.currentUser)await signInAnonymously(auth);
-  S.uid=auth.currentUser.uid;S.isAnon=!!auth.currentUser.isAnonymous;S.canWrite=true;S.isOwner=false;
+  window.SPLASH&&SPLASH.step(45,55);S.uid=auth.currentUser.uid;S.isAnon=!!auth.currentUser.isAnonymous;S.canWrite=true;S.isOwner=false;
   S.db=makeDb(fs,'guilds/'+safe(cfg.guildCode||'guild')+'/');
   const slowT=setTimeout(()=>{S.slow=true;render()},10000);
   const pending=new Set(['members','events','joins','comments']);
-  const done=(n,s)=>{if(!s.metadata.fromCache&&pending.delete(n)&&!pending.size){S.loaded=true;S.slow=false;clearTimeout(slowT);setTimeout(cleanupPast,1500)}if(s.metadata.fromCache&&!S.loaded&&s.docs.length){S.loaded=true}};
-  const fail=n=>e=>{console.error(n,e);pending.delete(n);if(!pending.size){S.loaded=true;clearTimeout(slowT)}S.slow=false;
+  const done=(n,s)=>{if(!s.metadata.fromCache&&pending.delete(n)){window.SPLASH&&SPLASH.step(45+(4-pending.size)*13,60+(4-pending.size)*13);if(!pending.size)window.SPLASH&&SPLASH.finish()}
+    if(!s.metadata.fromCache&&!pending.size&&!S.loaded_){S.loaded_=true;S.loaded=true;S.slow=false;clearTimeout(slowT);setTimeout(cleanupPast,1500)}if(s.metadata.fromCache&&!S.loaded&&s.docs.length){S.loaded=true}};
+  const fail=n=>e=>{console.error(n,e);pending.delete(n);if(!pending.size){S.loaded=true;clearTimeout(slowT);window.SPLASH&&SPLASH.finish()}S.slow=false;
     if(e&&e.code==='permission-denied'){S.offline=true;S.offlineMsg='데이터를 읽을 권한이 없어요. Firestore 규칙과 익명 로그인 설정(안내서 2단계)을 확인해주세요.'}render()};
   const since=ymd(addDays(new Date(),-45));
   S.db.collection('members').onSnapshot(s=>{const o={};s.docs.forEach(d=>{const x=d.data();if(x&&x.uid)o[x.uid]=x});S.members=o;done('members',s);render()},fail('members'));
@@ -781,7 +833,7 @@ async function cleanupPast(){
   S.db.collection('joins').where('at','>=',Date.now()-120*864e5).onSnapshot(s=>{S.joins=s.docs.map(d=>({...d.data(),_id:d.id})).filter(j=>j.eventId&&j.uid);done('joins',s);render()},fail('joins'));
   S.db.collection('meta').doc('admins').onSnapshot(s=>{const d=s.exists?s.data():null;S.admins=Array.isArray(d?.uids)?d.uids:[];S.isOwner=S.admins.includes(S.uid);S.adminsLoaded=true;render()},e=>{console.error('admins',e);S.adminsLoaded=true;render()});
   S.db.collection('comments').orderBy('at','desc').limit(60).onSnapshot(s=>{S.comments=s.docs.map(d=>({...d.data(),_id:d.id})).filter(c=>c.uid&&c.text);done('comments',s);render()},fail('comments'));
-}catch(e){console.error(e);S.offline=true;
+}catch(e){console.error(e);window.SPLASH&&SPLASH.finish();S.offline=true;
   S.offlineMsg=e&&e.code==='auth/operation-not-allowed'||e&&e.code==='auth/admin-restricted-operation'?'Firebase에서 익명 로그인을 켜야 해요 (안내서 2단계).':'연결 중 문제가 생겼어요 ('+esc(e&&e.code||e&&e.message||'오류')+'). 인터넷 연결과 config.js를 확인해주세요.';render()}})();
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
