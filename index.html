@@ -366,6 +366,19 @@ header .swords{width:30px;height:30px;vertical-align:-6px;margin-right:4px;filte
 .theme-b nav.tabs .th-ico .ring,.theme-b nav.tabs .th-ico .ink{fill:currentColor;stroke:none}
 .theme-b nav.tabs button.on .th-ico{filter:drop-shadow(0 0 6px rgba(233,205,140,.7))}
 
+
+/* ---- 날짜 칸 크기: 시안처럼 거의 정사각형 (내용이 많으면 자동으로 늘어남) ---- */
+.wk{grid-template-columns:repeat(7,minmax(0,1fr))}
+.theme-a .dc,.theme-b .dc{min-height:0;min-width:0;aspect-ratio:1/1.06;gap:1px;padding:4px 2px 3px}
+.theme-a .cal,.theme-b .cal{padding-left:7px;padding-right:7px}
+.theme-a .wk,.theme-b .wk{gap:4px}
+.theme-a .dc .num,.theme-b .dc .num{padding-left:3px}
+.theme-a .dc .bar,.theme-b .dc .bar{font-size:9.5px;letter-spacing:-.4px;padding:1px 2px;text-align:center;text-overflow:clip}
+.theme-b .dc .bar::before{display:none}
+.theme-b .dc .bar{background:var(--cs);border-radius:5px;color:#fff}
+.theme-a .dc .bar,.theme-b .dc .bar{line-height:1.25}
+.theme-a .dc.sel,.theme-a .dc.sel.mine{background-size:15px,auto!important;background-position:right 3px top 4px,0 0!important}
+
 .theme-b .chips button.on{background:var(--gold);border-color:var(--gold);color:#1b1e4c}
 .theme-b .toast{background:var(--gold);color:#1b1e4c}
 .theme-b .detect.ok{color:#cfe0ff}
