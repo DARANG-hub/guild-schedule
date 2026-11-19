@@ -398,16 +398,16 @@ function eventCard(ev){
 function renderMembers(){
   const ids=new Set([...Object.keys(S.members),...S.joins.map(j=>j.uid)]);if(S.uid)ids.add(S.uid);
   const todayS=ymd(new Date());
-  const upcoming=new Set(S.events.filter(e=>e.date>=todayS).map(e=>e.id));
+  const nowT=Date.now();const upcoming=new Set(S.events.filter(e=>evEnd(e).getTime()>nowT).map(e=>e.id));
   const list=[...ids].map(u=>({u,name:nameOf(u),cls:S.members[u]?.cls||'',
     up:S.joins.filter(j=>j.uid===u&&upcoming.has(j.eventId)).length,
     total:S.joins.filter(j=>j.uid===u).length})).sort((a,b)=>a.name.localeCompare(b.name,'ko'));
   let h=`<div class="card"><h3>길드원 ${list.length}명</h3>`;
   h+=list.length?list.map(m=>`<div class="mem"><div class="av">${esc(m.name.slice(0,1))}</div>
     <div class="n"><b>${esc(m.name)}</b>${m.u===S.uid?'<span class="tag">나</span>':''}<small>${esc(m.cls||'직업 미입력')}</small></div>
-    <div class="st">예정 ${m.up}회<br>누적 ${m.total}회</div></div>`).join(''):`<p class="hint" style="margin:0">아직 아무도 없어요.</p>`;
+    <div class="st">예정 ${m.up}회</div></div>`).join(''):`<p class="hint" style="margin:0">아직 아무도 없어요.</p>`;
   h+=`</div>`;
-  const mine=S.events.filter(e=>e.date>=todayS&&joinsOf(e.id).some(j=>j.uid===S.uid)).sort((a,b)=>(a.date+(a.time||'99')).localeCompare(b.date+(b.time||'99')));
+  const mine=S.events.filter(e=>evEnd(e).getTime()>nowT&&joinsOf(e.id).some(j=>j.uid===S.uid)).sort((a,b)=>(a.date+(a.time||'99')).localeCompare(b.date+(b.time||'99')));
   if(S.uid){h+=`<div class="card"><h3>내 참여 예정</h3>${mine.length?mine.map(e=>{const d=dun(e.content);
     return `<div class="mem" style="cursor:pointer" data-act="goto" data-k="${e.date}"><div class="av" style="${cvars(d)};background:var(--cs);color:var(--c)">${esc(d.short.slice(0,1))}</div>
       <div class="n"><b>${esc(d.key)}</b><small>${dlabel(e.date)} · ${esc(e.time||'시간 미정')}</small></div><div class="st">${joinsOf(e.id).length}/${maxOf(e)}</div></div>`}).join('')
@@ -526,6 +526,30 @@ document.addEventListener('click',async e=>{
   }
 });
 
+/* ---------- 지난 일정 자동 정리 ----------
+   날짜가 지난(어제 이전) 파티를 정리해요.
+   - 내가 만든 파티: 파티와 참여 기록을 모두 삭제
+   - 다른 사람이 만든 파티: 내 참여 기록만 삭제 (파티는 만든 사람 앱이 열릴 때 지워져요)
+   - 댓글: 30일 지난 내 댓글 삭제 */
+let cleaned=false;
+async function cleanupPast(){
+  if(cleaned||!S.db||!S.uid)return;cleaned=true;
+  const td=ymd(new Date());
+  const past=S.events.filter(e=>e.date&&e.date<td);
+  const del=async p=>{try{await p}catch(_){}};
+  for(const e of past){
+    const js=joinsOf(e.id);
+    if(e.by===S.uid){
+      await del(S.db.collection('events').doc(e.id).delete());
+      for(const j of js)await del(S.db.collection('joins').doc(j._id).delete());
+    }else{
+      for(const j of js.filter(j=>j.uid===S.uid))await del(S.db.collection('joins').doc(j._id).delete());
+    }
+  }
+  const old=Date.now()-30*864e5;
+  for(const c of S.comments.filter(c=>c.uid===S.uid&&(c.at||0)<old))await del(S.db.collection('comments').doc(c._id).delete());
+}
+
 /* ---------- 시작 ---------- */
 (async()=>{try{
   render();
@@ -541,7 +565,7 @@ document.addEventListener('click',async e=>{
   S.db=makeDb(fs,'guilds/'+safe(cfg.guildCode||'guild')+'/');
   const slowT=setTimeout(()=>{S.slow=true;render()},10000);
   const pending=new Set(['members','events','joins','comments']);
-  const done=(n,s)=>{if(!s.metadata.fromCache&&pending.delete(n)&&!pending.size){S.loaded=true;S.slow=false;clearTimeout(slowT)}if(s.metadata.fromCache&&!S.loaded&&s.docs.length){S.loaded=true}};
+  const done=(n,s)=>{if(!s.metadata.fromCache&&pending.delete(n)&&!pending.size){S.loaded=true;S.slow=false;clearTimeout(slowT);setTimeout(cleanupPast,1500)}if(s.metadata.fromCache&&!S.loaded&&s.docs.length){S.loaded=true}};
   const fail=n=>e=>{console.error(n,e);pending.delete(n);if(!pending.size){S.loaded=true;clearTimeout(slowT)}S.slow=false;
     if(e&&e.code==='permission-denied'){S.offline=true;S.offlineMsg='데이터를 읽을 권한이 없어요. Firestore 규칙과 익명 로그인 설정(안내서 2단계)을 확인해주세요.'}render()};
   const since=ymd(addDays(new Date(),-45));
