@@ -383,6 +383,11 @@ header .swords{width:30px;height:30px;vertical-align:-6px;margin-right:4px;filte
 .theme-a .dc.sel,.theme-a .dc.sel.mine{background-size:15px,auto!important;background-position:right 3px top 4px,0 0!important}
 
 /* ---- 주간 모집 ---- */
+.cftimes{margin:8px 0 4px}.cftimes button{font-size:12px;padding:5px 9px}
+.cfc{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:3px 6px 3px 10px;font-size:12px}
+.cfc.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+.cf-ctime{border:0;background:transparent;color:inherit;font:inherit;font-size:12px;width:88px;min-height:24px;padding:0}
+
 .rlist{margin-top:10px;font-size:13px;background:var(--bg);border-radius:10px;padding:8px 10px}
 .rlist summary{cursor:pointer;font-weight:700;list-style:none}
 .rlist summary::-webkit-details-marker{display:none}
@@ -548,7 +553,7 @@ const DUNGEONS=[
   {key:'브리레흐',short:'브리',c:'--bri',cs:'--bri-soft'},
 ];
 const DEFAULT_MAX=8;
-const TIMES=['19:00','20:00','21:00','22:00','23:00'];
+const TIMES=['10:00','13:00','15:00','17:00','19:00','20:00','21:00','22:00','23:00'];
 const WD=['일','월','화','수','목','금','토'];
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -995,53 +1000,65 @@ function openRoundNew(){
     const ref=S.db.collection('rounds').doc();const body={start,status:'open',by:S.uid,at:Date.now(),confirmed:[]};
     if(await guard(ref.set(body),'모집을 열었어요')){S.rounds=[...S.rounds.filter(x=>x.id!==ref.id),{...body,id:ref.id}];closeModal();S.tab='cal';render()}};
 }
-const AN={days:new Set(),touched:false};
+const AN={manual:new Set(),text:new Set(),off:new Set()};
+const anDays=()=>{const r=new Set([...AN.manual,...AN.text]);AN.off.forEach(o=>r.delete(o));return r};
 function openAnswer(){
   const r=curRound();if(!r)return;const mine=myAns(r);const days=rDays(r);
-  AN.days=new Set(mine?.days||[]);AN.touched=!!mine;
-  const draw=()=>{$('#anDays').innerHTML=days.map(d=>`<button type="button" class="${AN.days.has(d.off)?'on':''}" data-act="an-day" data-o="${d.off}">${WDK[d.wd]}<small>${sd(d.d)}</small></button>`).join('')};
+  AN.manual=new Set(mine?.days||[]);AN.text=new Set();AN.off=new Set();
+  const draw=()=>{const on=anDays();
+    $('#anDays').innerHTML=days.map(d=>`<button type="button" class="${on.has(d.off)?'on':''}" data-act="an-day" data-o="${d.off}">${WDK[d.wd]}<small>${sd(d.d)}</small></button>`).join('');
+    const tx=days.filter(d=>AN.text.has(d.off));
+    $('#anHint').innerHTML=tx.length?`✨ 글에서 알아들은 요일: <b>${tx.map(d=>WDK[d.wd]).join('·')}</b>`:'요일을 누르거나, "평일 8시 이후 주말 종일"처럼 써도 돼요';};
+  const fromText=v=>{const set=parseAvail(v);AN.text=new Set(days.filter(d=>set.has(d.wd)).map(d=>d.off))};
   $('#modal').innerHTML=`<div class="sheet-bg" data-act="close-bg"><form class="sheet" id="anf">
     <h2>가능한 요일</h2><p class="sub">${sd(days[0].d)} ~ ${sd(days[6].d)} · 글렌·브리 공통이에요</p>
     <div class="f"><div class="chips anchips" id="anDays"></div></div>
-    <div class="f"><label>메모 (시간 등 · 글로 쓰면 요일도 자동으로 골라져요)</label><textarea name="memo" rows="2" maxlength="100" placeholder="예) 평일 8시 이후, 주말 종일">${esc(mine?.memo||'')}</textarea></div>
-    <div class="acts"><button type="button" class="btn ghost" data-act="close">취소</button>${mine?'':''}<button class="btn pri">저장</button></div>
+    <div class="f"><label>메모 (시간 등)</label><textarea name="memo" rows="2" maxlength="100" placeholder="예) 평일 8시 이후, 주말 종일">${esc(mine?.memo||'')}</textarea>
+      <p class="hint" id="anHint" style="margin:6px 0 0"></p></div>
+    <div class="acts"><button type="button" class="btn ghost" data-act="close">취소</button><button class="btn pri">저장</button></div>
   </form></div>`;
-  draw();
-  $('#anf [name=memo]').oninput=e=>{if(AN.touched)return;const set=parseAvail(e.target.value);AN.days=new Set(days.filter(d=>set.has(d.wd)).map(d=>d.off));draw()};
+  fromText(mine?.memo||'');draw();
+  const ta=$('#anf [name=memo]');const onT=()=>{const before=[...AN.text].join();fromText(ta.value);if([...AN.text].join()!==before)draw()};
+  ta.addEventListener('input',onT);ta.addEventListener('compositionend',onT);
   AN.redraw=draw;
   $('#anf').onsubmit=async e=>{e.preventDefault();const memo=String(new FormData(e.target).get('memo')||'').trim().slice(0,100);
-    const body={roundId:r.id,uid:S.uid,days:[...AN.days].sort((a,b)=>a-b),memo,at:mine?.at||Date.now()};
+    fromText(memo);
+    const body={roundId:r.id,uid:S.uid,days:[...anDays()].sort((a,b)=>a-b),memo,at:mine?.at||Date.now()};
     const id=safe(r.id)+'__'+safe(S.uid);
-    if(await guard(S.db.collection('answers').doc(id).set(body),'응답했어요')){S.answers=[...S.answers.filter(a=>a._id!==id),{...body,_id:id}];closeModal();render()}};
+    if(await guard(S.db.collection('answers').doc(id).set(body),mine?'수정했어요':'응답했어요')){S.answers=[...S.answers.filter(a=>a._id!==id),{...body,_id:id}];closeModal();render()}};
 }
 // 확정 시트
 const CF={};
 function openConfirm(){
   const r=curRound();if(!r)return;
-  for(const d of DUNGEONS)if(!CF[d.key]||CF[d.key].round!==r.id)CF[d.key]={round:r.id,days:new Set(),time:'21:00',picks:{}};
+  for(const d of DUNGEONS)if(!CF[d.key]||CF[d.key].round!==r.id)CF[d.key]={round:r.id,days:new Set(),times:{},picks:{}};
   drawConfirm(r);
 }
 function drawConfirm(r){
   const days=rDays(r),as=ansOf(r);
   const avail=o=>as.filter(a=>(a.days||[]).includes(o));
-  let h=`<div class="sheet-bg" data-act="close-bg"><form class="sheet" id="cff"><h2>✅ 일정 확정</h2><p class="sub">던전마다 요일과 시간을 고르세요. 그 요일이 된다고 답한 사람이 자동으로 들어가요(최대 ${DEFAULT_MAX}명).</p>`;
+  let h=`<div class="sheet-bg" data-act="close-bg"><form class="sheet" id="cff"><h2>✅ 일정 확정</h2><p class="sub">던전마다 요일을 고르고, 요일별로 시간을 정하세요. 그 요일이 된다고 답한 사람이 자동으로 들어가요(최대 ${DEFAULT_MAX}명).</p>`;
   for(const dg of DUNGEONS){const c=CF[dg.key];
     h+=`<div class="cfd" style="${cvars(dg)}"><h3>⚔ ${esc(dg.key)}</h3>
       <div class="chips anchips">${days.map(d=>`<button type="button" class="${c.days.has(d.off)?'on':''}" data-act="cf-day" data-g="${esc(dg.key)}" data-o="${d.off}">${WDK[d.wd]} ${avail(d.off).length}<small>${sd(d.d)}</small></button>`).join('')}</div>
-      <div class="chips" style="margin-top:8px">${TIMES.map(t=>`<button type="button" class="${c.time===t?'on':''}" data-act="cf-time" data-g="${esc(dg.key)}" data-v="${t}">${t}</button>`).join('')}</div>`;
+`;
     for(const o of [...c.days].sort((a,b)=>a-b)){const d=days[o];const av=avail(o);
       if(!c.picks[o])c.picks[o]=new Set(av.slice(0,DEFAULT_MAX).map(a=>a.uid));
-      h+=`<div class="cfp"><b>${WDK[d.wd]} ${sd(d.d)} ${c.time}</b> · ${c.picks[o].size}/${DEFAULT_MAX}명
+      const tm=c.times[o]||'21:00';const custom=!TIMES.includes(tm);
+      h+=`<div class="cfp"><b>${WDK[d.wd]} ${sd(d.d)} ${tm}</b> · ${c.picks[o].size}/${DEFAULT_MAX}명
+        <div class="chips cftimes">${TIMES.map(t=>`<button type="button" class="${tm===t?'on':''}" data-act="cf-time" data-g="${esc(dg.key)}" data-o="${o}" data-v="${t}">${t}</button>`).join('')}
+          <label class="cfc ${custom?'on':''}">직접 입력<input type="time" class="cf-ctime" data-g="${esc(dg.key)}" data-o="${o}" value="${custom?esc(tm):''}"></label></div>
         ${av.length?`<ul>${av.map(a=>`<li><label><input type="checkbox" data-act="cf-pick" data-g="${esc(dg.key)}" data-o="${o}" data-u="${esc(a.uid)}" ${c.picks[o].has(a.uid)?'checked':''}> ${esc(nameOf(a.uid))}${a.memo?` <small>${esc(a.memo)}</small>`:''}</label></li>`).join('')}</ul>`:'<p class="hint" style="margin:4px 0">이 요일에 된다고 한 사람이 없어요</p>'}</div>`}
     h+=`</div>`}
   h+=`<p class="ferr" id="cfErr"></p><div class="acts"><button type="button" class="btn ghost" data-act="close">취소</button><button class="btn pri">확정하고 캘린더에 올리기</button></div></form></div>`;
   const sc=$('#cff')?.scrollTop||0;
   $('#modal').innerHTML=h;$('#cff').scrollTop=sc;
+  document.querySelectorAll('#cff .cf-ctime').forEach(i=>i.onchange=()=>{if(i.value){CF[i.dataset.g].times[+i.dataset.o]=i.value;drawConfirm(r)}});
   $('#cff').onsubmit=async e=>{e.preventDefault();await doConfirm(r)};
 }
 async function doConfirm(r){
   const days=rDays(r);const plan=[];
-  for(const dg of DUNGEONS){const c=CF[dg.key];for(const o of [...c.days].sort((a,b)=>a-b))plan.push({dungeon:dg.key,date:days[o].date,time:c.time,uids:[...(c.picks[o]||[])]})}
+  for(const dg of DUNGEONS){const c=CF[dg.key];for(const o of [...c.days].sort((a,b)=>a-b))plan.push({dungeon:dg.key,date:days[o].date,time:c.times[o]||'21:00',uids:[...(c.picks[o]||[])]})}
   if(!plan.length){$('#cfErr').textContent='확정할 요일을 하나 이상 골라 주세요.';return}
   if(plan.some(p=>p.uids.length>DEFAULT_MAX)){$('#cfErr').textContent=`한 파티는 ${DEFAULT_MAX}명까지예요. 체크를 줄여 주세요.`;return}
   const btn=$('#cff button.pri');btn.disabled=true;btn.textContent='올리는 중…';
@@ -1240,9 +1257,9 @@ document.addEventListener('click',async e=>{
     case'rlist':{e.preventDefault();S.rlistOpen=!S.rlistOpen;render();break}
     case'rday':{const o=+el.dataset.o;S.rsel=S.rsel===o?null:o;render();break}
     case'ans':if(writable())needName(openAnswer);break;
-    case'an-day':{const o=+el.dataset.o;AN.touched=true;AN.days.has(o)?AN.days.delete(o):AN.days.add(o);AN.redraw&&AN.redraw();break}
+    case'an-day':{const o=+el.dataset.o;if(anDays().has(o)){AN.manual.delete(o);AN.off.add(o)}else{AN.off.delete(o);AN.manual.add(o)}AN.redraw&&AN.redraw();break}
     case'cf-day':{const c=CF[el.dataset.g],o=+el.dataset.o;c.days.has(o)?c.days.delete(o):c.days.add(o);drawConfirm(curRound());break}
-    case'cf-time':{CF[el.dataset.g].time=el.dataset.v;drawConfirm(curRound());break}
+    case'cf-time':{CF[el.dataset.g].times[+el.dataset.o]=el.dataset.v;drawConfirm(curRound());break}
     case'cf-pick':{const c=CF[el.dataset.g],o=+el.dataset.o,u=el.dataset.u;const st=c.picks[o];el.checked?st.add(u):st.delete(u);drawConfirm(curRound());break}
     case'madmin':openMemberAdmin(el.dataset.u);break;
         case'mdel':{
