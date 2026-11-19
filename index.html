@@ -132,6 +132,26 @@ nav.tabs button.on{color:var(--accent);font-weight:700}
 .cchip .go{font-size:12px;font-weight:700;border-radius:8px;padding:5px 9px;background:var(--cs);color:var(--c)}
 .cchip .jn{font-size:12px;font-weight:700;border-radius:8px;padding:5px 9px;background:var(--accent);color:#fff}
 .cchip .nf{font-size:12px;color:var(--gold)}
+.hdr-btns{display:flex;gap:6px;align-items:center}
+.help-btn{width:34px;height:34px;border-radius:50%;background:var(--card);border:1px solid var(--line);font-size:15px;display:grid;place-items:center}
+.pp.kick{cursor:pointer}
+.pp.kick::after{content:" ×";opacity:.6}
+.pp.armed{background:var(--danger);color:#fff}
+.btn.cal{background:var(--gold-soft);color:var(--gold)}
+.sw{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-size:14px}
+.sw input{width:20px;height:20px;accent-color:var(--accent)}
+.f select{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;font:inherit;color:var(--ink)}
+.sect{border-top:1px solid var(--line);margin:16px -18px 0;padding:14px 18px 0}
+.sect h3{font-size:14px;margin:0 0 8px}
+.dz{color:var(--danger);border:1px solid color-mix(in srgb,var(--danger) 40%,transparent);border-radius:10px;padding:10px;width:100%;font-weight:700;font-size:13px}
+.dz.armed{background:var(--danger);color:#fff}
+.help h3{font-size:15px;margin:16px 0 6px}
+.help p,.help li{font-size:14px;line-height:1.6;margin:0}
+.help ul{padding-left:18px;margin:4px 0}
+.help .ex{background:var(--bg);border-radius:8px;padding:6px 10px;font-size:13px;margin:4px 0}
+.calopt{display:flex;flex-direction:column;gap:8px}
+.calopt button{border:1px solid var(--line);border-radius:12px;padding:13px;text-align:left;background:var(--bg);font-size:14px}
+.calopt button small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
 .toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 76px);transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:10px;font-size:13px;z-index:30;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1}
 </style>
@@ -140,7 +160,7 @@ nav.tabs button.on{color:var(--accent);font-weight:700}
 <div class="wrap">
   <header>
     <h1>⚔️ 길드 사냥 일정<small>글렌 베르나 · 브리레흐 파티 모집</small></h1>
-    <button class="me-chip" data-act="profile" id="meChip">캐릭터 등록</button>
+    <div class="hdr-btns"><button class="help-btn" data-act="help" aria-label="도움말">❓</button><button class="me-chip" data-act="profile" id="meChip">캐릭터 등록</button></div>
   </header>
   <div id="banner"></div>
   <main id="view"><div class="note">불러오는 중…</div></main>
@@ -170,7 +190,8 @@ function makeDb(fs,base){
       onSnapshot:(next,err)=>onSnapshot(q,{includeMetadataChanges:true},
         s=>next({docs:s.docs.map(d=>({id:d.id,data:()=>d.data()})),metadata:{fromCache:s.metadata.fromCache}}),err)
     });
-    return{...mk(cref),doc(id){const r=id?doc(cref,id):doc(cref);return{id:r.id,set:b=>setDoc(r,b),delete:()=>deleteDoc(r)}}};
+    return{...mk(cref),doc(id){const r=id?doc(cref,id):doc(cref);return{id:r.id,set:b=>setDoc(r,b),delete:()=>deleteDoc(r),
+      onSnapshot:(next,err)=>onSnapshot(r,s=>next({exists:s.exists(),data:()=>s.data()}),err)}}};
   }};
 }
 const DUNGEONS=[
@@ -194,7 +215,7 @@ const dlabel=s=>{const d=parseYmd(s);return `${d.getMonth()+1}월 ${d.getDate()}
 
 const today0=new Date();
 const S={db:null,user:null,uid:null,canWrite:true,isOwner:false,
-  members:{},events:[],joins:[],comments:[],profiles:{},asked:new Set(),
+  members:{},events:[],joins:[],comments:[],admins:[],adminsLoaded:false,profiles:{},asked:new Set(),
   tab:'cal',month:new Date(today0.getFullYear(),today0.getMonth(),1),sel:ymd(today0),
   loaded:false,slow:false,offline:false,busy:false};
 
@@ -386,10 +407,12 @@ function eventCard(ev){
     <div class="ev-top"><div class="ev-name">${esc(d.key)}</div><div class="ev-time">${esc(ev.time||'시간 미정')}</div>
       <div class="ev-count ${full?'full':''}">${js.length}/${max}</div></div>
     ${ev.memo?`<div class="ev-memo">${esc(ev.memo)}</div>`:''}
-    <div class="ppl">${js.map(j=>`<span class="pp">${esc(nameOf(j.uid))}${S.members[j.uid]?.cls?` · ${esc(S.members[j.uid].cls)}`:''}</span>`).join('')}${'<span class="pp slot">빈자리</span>'.repeat(empties)}</div>
+    <div class="ppl">${js.map(j=>{const kick=S.isOwner&&writable()&&!past&&j.uid!==S.uid;
+      return `<span class="pp ${kick?'kick':''}" ${kick?`data-act="kick" data-id="${esc(j._id)}"`:''}>${esc(nameOf(j.uid))}${S.members[j.uid]?.cls?` · ${esc(S.members[j.uid].cls)}`:''}</span>`}).join('')}${'<span class="pp slot">빈자리</span>'.repeat(empties)}</div>
     ${writable()&&(!past||canDel)?`<div class="ev-actions">
       ${past?'':mine?`<button class="btn sec" data-act="leave" data-id="${esc(ev.id)}">참여 취소</button>`
         :`<button class="btn pri" data-act="join" data-id="${esc(ev.id)}" ${full?'disabled':''}>${full?'모집 완료':'참여하기'}</button>`}
+      ${!past&&mine&&calPref().on?`<button class="btn cal" data-act="cal" data-id="${esc(ev.id)}">📲 캘린더</button>`:''}
       ${canDel?`<button class="btn danger" data-act="del" data-id="${esc(ev.id)}" style="margin-left:auto">파티 삭제</button>`:''}
     </div>`:''}
   </article>`;
@@ -404,9 +427,10 @@ function renderMembers(){
     total:S.joins.filter(j=>j.uid===u).length})).sort((a,b)=>a.name.localeCompare(b.name,'ko'));
   let h=`<div class="card"><h3>길드원 ${list.length}명</h3>`;
   h+=list.length?list.map(m=>`<div class="mem"><div class="av">${esc(m.name.slice(0,1))}</div>
-    <div class="n"><b>${esc(m.name)}</b>${m.u===S.uid?'<span class="tag">나</span>':''}<small>${esc(m.cls||'직업 미입력')}</small></div>
-    <div class="st">예정 ${m.up}회</div></div>`).join(''):`<p class="hint" style="margin:0">아직 아무도 없어요.</p>`;
+    <div class="n"><b>${esc(m.name)}</b>${S.admins.includes(m.u)?'<span class="tag">길드장</span>':''}${m.u===S.uid?'<span class="tag">나</span>':''}<small>${esc(m.cls||'직업 미입력')}</small></div>
+    <div class="st">예정 ${m.up}회</div>${S.isOwner&&writable()&&m.u!==S.uid?`<button class="btn sec" style="margin-left:8px;padding:6px 10px" data-act="madmin" data-u="${esc(m.u)}">관리</button>`:''}</div>`).join(''):`<p class="hint" style="margin:0">아직 아무도 없어요.</p>`;
   h+=`</div>`;
+  if(S.adminsLoaded&&!S.admins.length&&writable())h+=`<div class="card"><h3>👑 길드장이 아직 없어요</h3><p class="hint">길드장은 다른 사람의 파티, 이름, 댓글을 지우고 파티에서 사람을 뺄 수 있어요. 처음 누른 사람이 길드장이 되니, 길드장 본인이 눌러 주세요.</p><button class="btn pri" data-act="claim-admin">내가 길드장 하기</button></div>`;
   const mine=S.events.filter(e=>evEnd(e).getTime()>nowT&&joinsOf(e.id).some(j=>j.uid===S.uid)).sort((a,b)=>(a.date+(a.time||'99')).localeCompare(b.date+(b.time||'99')));
   if(S.uid){h+=`<div class="card"><h3>내 참여 예정</h3>${mine.length?mine.map(e=>{const d=dun(e.content);
     return `<div class="mem" style="cursor:pointer" data-act="goto" data-k="${e.date}"><div class="av" style="${cvars(d)};background:var(--cs);color:var(--c)">${esc(d.short.slice(0,1))}</div>
@@ -424,9 +448,15 @@ function openProfile(after){
     <h2>내 캐릭터</h2><p class="sub">파티 목록에 이 이름으로 표시돼요.</p>
     <div class="f"><label>캐릭터명</label><input name="name" maxlength="20" required value="${esc(m.name||'')}" placeholder="캐릭터 이름"></div>
     <div class="f"><label>직업 / 재능 (선택)</label><input name="cls" maxlength="20" value="${esc(m.cls||'')}" placeholder="예: 근접, 마법, 힐러"></div>
+    <div class="sect"><h3>📲 휴대폰 캘린더</h3>
+      <label class="sw"><span>참여한 파티를 내 캘린더에 추가하는<br>버튼 보이기</span><input type="checkbox" name="calOn" ${calPref().on?'checked':''}></label>
+      <div class="f" style="margin-top:10px"><label>캘린더 알림</label><select name="calAlarm">${[[0,'알림 없음'],[10,'10분 전'],[30,'30분 전'],[60,'1시간 전'],[120,'2시간 전']].map(([v,t])=>`<option value="${v}" ${calPref().alarm===v?'selected':''}>${t}</option>`).join('')}</select></div>
+      <p class="hint">이 휴대폰에만 적용돼요. 켜 두면 참여할 때 캘린더에 추가할지 물어봐요.</p></div>
     <div class="acts"><button type="button" class="btn ghost" data-act="close">취소</button><button class="btn pri">저장</button></div>
+    ${m.name?`<div class="sect"><h3>내 정보 삭제</h3><p class="hint">캐릭터명, 내 참여 기록, 내 댓글, 나 혼자 있는 파티를 모두 지워요. 되돌릴 수 없어요.</p><button type="button" class="dz" data-act="delme">내 정보 삭제</button></div>`:''}
   </form></div>`;
   $('#pf').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);
+    setCalPref({on:!!f.get('calOn'),alarm:+f.get('calAlarm')||0});
     const name=String(f.get('name')).trim().slice(0,20),cls=String(f.get('cls')).trim().slice(0,20);if(!name)return;
     if(await guard(S.db.collection('members').doc(safe(S.uid)).set({uid:S.uid,name,cls,at:Date.now()}),'저장했어요')){S.members={...S.members,[S.uid]:{uid:S.uid,name,cls}};closeModal();render();after&&after()}};
   setTimeout(()=>$('#pf [name=name]')?.focus(),50);
@@ -481,7 +511,100 @@ async function applyTo(date,dungeon,time,memo,okMsg){
   return ev;
 }
 async function submitApply(memo){
-  if(await applyTo(A.date,A.dungeon,A.time,memo,`${dun(A.dungeon).key} 신청 완료!`)){closeModal();S.sel=A.date;render()}
+  const ev=await applyTo(A.date,A.dungeon,A.time,memo,`${dun(A.dungeon).key} 신청 완료!`);if(ev){closeModal();S.sel=A.date;render();offerCal(ev)}
+}
+
+/* ---------- 휴대폰 캘린더 (선택 기능) ---------- */
+const CAL_KEY='guild.cal';
+function calPref(){try{const p=JSON.parse(localStorage.getItem(CAL_KEY)||'{}');return{on:!!p.on,alarm:Number.isFinite(p.alarm)?p.alarm:30}}catch(_){return{on:false,alarm:30}}}
+function setCalPref(p){try{localStorage.setItem(CAL_KEY,JSON.stringify(p))}catch(_){}}
+function evRange(ev){
+  const d=parseYmd(ev.date);
+  if(!ev.time)return{allDay:true,s:d,e:addDays(d,1)};
+  const[h,m]=ev.time.split(':').map(Number);const s=new Date(d);s.setHours(h,m,0,0);return{allDay:false,s,e:new Date(s.getTime()+2*3600e3)};
+}
+const utcStamp=d=>d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+const dayStamp=d=>ymd(d).replace(/-/g,'');
+const icsEsc=t=>String(t||'').replace(/\\/g,'\\\\').replace(/;/g,'\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');
+const appUrl=()=>location.origin+location.pathname;
+function evDetails(ev){const names=joinsOf(ev.id).map(j=>nameOf(j.uid)).join(', ');return `참여: ${names||'-'}${ev.memo?'\n메모: '+ev.memo:''}\n${appUrl()}`}
+function downloadIcs(ev){
+  const r=evRange(ev),d=dun(ev.content),alarm=calPref().alarm;
+  const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//guild-schedule//KO','CALSCALE:GREGORIAN','BEGIN:VEVENT',
+    'UID:'+ev.id+'@guild-schedule','DTSTAMP:'+utcStamp(new Date()),
+    r.allDay?'DTSTART;VALUE=DATE:'+dayStamp(r.s):'DTSTART:'+utcStamp(r.s),
+    r.allDay?'DTEND;VALUE=DATE:'+dayStamp(r.e):'DTEND:'+utcStamp(r.e),
+    'SUMMARY:'+icsEsc('⚔️ '+d.key+' 파티'),'DESCRIPTION:'+icsEsc(evDetails(ev)),'URL:'+appUrl()];
+  if(alarm>0&&!r.allDay)L.push('BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+icsEsc(d.key+' 파티 '+alarm+'분 전'),'TRIGGER:-PT'+alarm+'M','END:VALARM');
+  L.push('END:VEVENT','END:VCALENDAR');
+  const blob=new Blob([L.join('\r\n')],{type:'text/calendar;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${d.short}-${ev.date}.ics`;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);
+}
+function openGoogle(ev){
+  const r=evRange(ev),d=dun(ev.content);
+  const dates=r.allDay?dayStamp(r.s)+'/'+dayStamp(r.e):utcStamp(r.s)+'/'+utcStamp(r.e);
+  const u='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent('⚔️ '+d.key+' 파티')+'&dates='+dates+'&details='+encodeURIComponent(evDetails(ev));
+  const a=document.createElement('a');a.href=u;a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();
+}
+function openCal(ev,ask){
+  const d=dun(ev.content),r=evRange(ev),alarm=calPref().alarm;
+  $('#modal').innerHTML=`<div class="sheet-bg" data-act="close-bg"><div class="sheet">
+    <h2>${ask?'캘린더에도 추가할까요?':'내 캘린더에 추가'}</h2>
+    <p class="sub">${esc(d.key)} · ${dlabel(ev.date)} ${esc(ev.time||'(시간 미정)')}</p>
+    <div class="calopt">
+      <button data-act="cal-ics" data-id="${esc(ev.id)}">📅 휴대폰 기본 캘린더<small>아이폰 캘린더 · 삼성 캘린더 ${alarm&&!r.allDay?`· ${alarm}분 전 알림 포함`:''}</small></button>
+      <button data-act="cal-g" data-id="${esc(ev.id)}">🗓️ 구글 캘린더<small>구글 캘린더를 쓰는 경우</small></button>
+    </div>
+    <div class="acts" style="margin-top:12px"><button class="btn ghost" data-act="close">${ask?'다음에':'닫기'}</button></div>
+  </div></div>`;
+}
+function offerCal(ev){if(ev&&calPref().on)setTimeout(()=>openCal(ev,true),400)}
+
+/* ---------- 길드장 / 삭제 ---------- */
+async function wipeUser(uid){
+  const del=async p=>{try{await p}catch(_){}};
+  for(const e of S.events.filter(e=>e.by===uid&&joinsOf(e.id).every(j=>j.uid===uid))){
+    await del(S.db.collection('events').doc(e.id).delete());
+  }
+  for(const j of S.joins.filter(j=>j.uid===uid))await del(S.db.collection('joins').doc(j._id).delete());
+  for(const c of S.comments.filter(c=>c.uid===uid))await del(S.db.collection('comments').doc(c._id).delete());
+  await del(S.db.collection('members').doc(safe(uid)).delete());
+  const m={...S.members};delete m[uid];S.members=m;
+}
+function openMemberAdmin(u){
+  const isA=S.admins.includes(u),n=nameOf(u);
+  $('#modal').innerHTML=`<div class="sheet-bg" data-act="close-bg"><div class="sheet">
+    <h2>${esc(n)}</h2><p class="sub">${esc(S.members[u]?.cls||'직업 미입력')} · 참여 ${S.joins.filter(j=>j.uid===u).length}회</p>
+    <div class="calopt">
+      <button data-act="toggle-admin" data-u="${esc(u)}">👑 ${isA?'길드장에서 해제':'길드장으로 지정'}<small>길드장은 다른 사람의 파티·이름·댓글을 지울 수 있어요</small></button>
+    </div>
+    <div class="sect"><h3>삭제</h3><p class="hint">이 사람의 이름, 참여 기록, 댓글, 혼자 있는 파티를 지워요. 중복으로 등록된 이름을 정리할 때 쓰세요.</p>
+      <button class="dz" data-act="mdel" data-u="${esc(u)}">이름과 참여 기록 삭제</button></div>
+    <div class="acts" style="margin-top:12px"><button class="btn ghost" data-act="close">닫기</button></div>
+  </div></div>`;
+}
+
+/* ---------- 도움말 ---------- */
+function openHelp(){
+  $('#modal').innerHTML=`<div class="sheet-bg" data-act="close-bg"><div class="sheet help">
+    <h2>❓ 사용법</h2>
+    <h3>🧙 처음 한 번</h3>
+    <p>오른쪽 위 <b>캐릭터 등록</b>에서 캐릭터명을 저장해요. 꼭 <b>홈 화면 아이콘</b>으로 열어서 쓰세요.</p>
+    <h3>📅 캘린더로 신청</h3>
+    <p>날짜 누르기 → <b>이 날 참여 신청</b> → 던전·시간 고르기. 같은 날·던전·시간 파티가 있으면 자동으로 합류해요.</p>
+    <h3>💬 댓글로 신청</h3>
+    <p>날짜와 던전을 쓰면 캘린더에 자동으로 등록돼요.</p>
+    <div class="ex">토요일 글렌 9시</div><div class="ex">다음주 월~수 브리 21:30</div><div class="ex">20일 21일 글렌 브리</div>
+    <ul><li>"9시"는 저녁 9시예요. 아침이면 "오전 9시"</li><li>다른 사람 댓글의 <b>나도 참여</b>로 바로 합류</li></ul>
+    <h3>✋ 취소·삭제</h3>
+    <p>파티의 <b>참여 취소</b>. 파티를 만든 사람과 길드장은 <b>파티 삭제</b>도 할 수 있어요. 지난 일정은 자동으로 정리돼요.</p>
+    <h3>📲 휴대폰 캘린더 (선택)</h3>
+    <p><b>캐릭터 등록/수정</b> 화면에서 켜면, 참여한 파티를 휴대폰 캘린더에 알림과 함께 넣을 수 있어요. 파티가 바뀌거나 취소돼도 휴대폰 캘린더는 자동으로 바뀌지 않아요.</p>
+    <h3>⚠️ 주의</h3>
+    <ul><li>앱을 지우거나 브라우저 데이터를 지우면 새 사람으로 인식돼요</li><li>길드 밖으로 주소를 공유하지 말아 주세요</li></ul>
+    <div class="acts" style="margin-top:16px"><button class="btn pri" data-act="close">닫기</button></div>
+  </div></div>`;
 }
 
 /* ---------- 동작 ---------- */
@@ -506,7 +629,7 @@ document.addEventListener('click',async e=>{
     case'pick-custom':{const c=$('#ctime');c.style.display='block';c.focus();try{c.showPicker&&c.showPicker()}catch(_){};break}
     case'join':{const id=el.dataset.id;needName(async()=>{const ev=S.events.find(x=>x.id===id);if(!ev)return;
       if(joinsOf(id).length>=maxOf(ev)){toast('이미 자리가 다 찼어요');return}
-      el.disabled=true;await guard(S.db.collection('joins').doc(safe(id)+'__'+safe(S.uid)).set({eventId:id,uid:S.uid,at:Date.now()}),'참여했어요')});break}
+      el.disabled=true;if(await guard(S.db.collection('joins').doc(safe(id)+'__'+safe(S.uid)).set({eventId:id,uid:S.uid,at:Date.now()}),'참여했어요'))offerCal(ev)});break}
     case'leave':{const id=el.dataset.id;el.disabled=true;
       if(await guard(S.db.collection('joins').doc(safe(id)+'__'+safe(S.uid)).delete(),'참여를 취소했어요')){
         const ev=S.events.find(x=>x.id===id);
@@ -514,6 +637,28 @@ document.addEventListener('click',async e=>{
         if(ev&&joinsOf(id).filter(j=>j.uid!==S.uid).length===0&&ev.by===S.uid){try{await S.db.collection('events').doc(safe(id)).delete()}catch(_){}}
       }break}
     case'post':if(writable())needName(postComment);break;
+    case'help':openHelp();break;
+    case'cal':{const ev=S.events.find(x=>x.id===el.dataset.id);if(ev)openCal(ev);break}
+    case'cal-ics':{const ev=S.events.find(x=>x.id===el.dataset.id);if(ev){downloadIcs(ev);closeModal()}break}
+    case'cal-g':{const ev=S.events.find(x=>x.id===el.dataset.id);if(ev){openGoogle(ev);closeModal()}break}
+    case'kick':{
+      if(delArm!==el.dataset.id){delArm=el.dataset.id;el.classList.add('armed');setTimeout(()=>{if(delArm===el.dataset.id){delArm=null;el.classList.remove('armed')}},3000);toast('한 번 더 누르면 파티에서 빼요');return}
+      delArm=null;await guard(S.db.collection('joins').doc(safe(el.dataset.id)).delete(),'파티에서 뺐어요');break}
+    case'claim-admin':{el.disabled=true;
+      if(await guard(S.db.collection('meta').doc('admins').set({uids:[S.uid]}),'길드장이 됐어요 👑')){S.admins=[S.uid];S.isOwner=true;render()}else el.disabled=false;break}
+    case'madmin':openMemberAdmin(el.dataset.u);break;
+    case'toggle-admin':{const u=el.dataset.u;const on=S.admins.includes(u);const next=on?S.admins.filter(x=>x!==u):[...S.admins,u].slice(0,10);
+      if(!next.length){toast('길드장은 최소 1명 있어야 해요');break}
+      if(await guard(S.db.collection('meta').doc('admins').set({uids:next}),on?'길드장에서 해제했어요':'길드장으로 지정했어요')){S.admins=next;closeModal();render()}break}
+    case'mdel':{
+      if(delArm!=='m:'+el.dataset.u){delArm='m:'+el.dataset.u;el.classList.add('armed');el.textContent='한 번 더 누르면 삭제';setTimeout(()=>{if(delArm==='m:'+el.dataset.u){delArm=null;el.classList.remove('armed');el.textContent='이름과 참여 기록 삭제'}},3000);return}
+      delArm=null;el.disabled=true;await wipeUser(el.dataset.u);closeModal();toast('삭제했어요');render();break}
+    case'delme':{
+      if(S.admins.includes(S.uid)&&S.admins.length===1){toast('다른 길드장을 먼저 지정해 주세요');break}
+      if(delArm!=='me'){delArm='me';el.classList.add('armed');el.textContent='한 번 더 누르면 모두 삭제돼요';setTimeout(()=>{if(delArm==='me'){delArm=null;el.classList.remove('armed');el.textContent='내 정보 삭제'}},3000);return}
+      delArm=null;el.disabled=true;
+      if(S.admins.includes(S.uid))await guard(S.db.collection('meta').doc('admins').set({uids:S.admins.filter(x=>x!==S.uid)}));
+      await wipeUser(S.uid);closeModal();toast('내 정보를 삭제했어요');render();break}
     case'cdel':{
       if(delArm!==el.dataset.id){delArm=el.dataset.id;el.textContent='정말 삭제?';setTimeout(()=>{if(delArm===el.dataset.id){delArm=null;el.textContent='삭제'}},3000);return}
       delArm=null;await guard(S.db.collection('comments').doc(safe(el.dataset.id)).delete(),'댓글을 삭제했어요');break}
@@ -572,6 +717,7 @@ async function cleanupPast(){
   S.db.collection('members').onSnapshot(s=>{const o={};s.docs.forEach(d=>{const x=d.data();if(x&&x.uid)o[x.uid]=x});S.members=o;done('members',s);render()},fail('members'));
   S.db.collection('events').where('date','>=',since).onSnapshot(s=>{S.events=s.docs.map(d=>({...d.data(),id:d.id})).filter(e=>e.date);done('events',s);render()},fail('events'));
   S.db.collection('joins').where('at','>=',Date.now()-120*864e5).onSnapshot(s=>{S.joins=s.docs.map(d=>({...d.data(),_id:d.id})).filter(j=>j.eventId&&j.uid);done('joins',s);render()},fail('joins'));
+  S.db.collection('meta').doc('admins').onSnapshot(s=>{const d=s.exists?s.data():null;S.admins=Array.isArray(d?.uids)?d.uids:[];S.isOwner=S.admins.includes(S.uid);S.adminsLoaded=true;render()},e=>{console.error('admins',e);S.adminsLoaded=true;render()});
   S.db.collection('comments').orderBy('at','desc').limit(60).onSnapshot(s=>{S.comments=s.docs.map(d=>({...d.data(),_id:d.id})).filter(c=>c.uid&&c.text);done('comments',s);render()},fail('comments'));
 }catch(e){console.error(e);S.offline=true;
   S.offlineMsg=e&&e.code==='auth/operation-not-allowed'||e&&e.code==='auth/admin-restricted-operation'?'Firebase에서 익명 로그인을 켜야 해요 (안내서 2단계).':'연결 중 문제가 생겼어요 ('+esc(e&&e.code||e&&e.message||'오류')+'). 인터넷 연결과 config.js를 확인해주세요.';render()}})();
