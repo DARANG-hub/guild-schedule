@@ -382,6 +382,44 @@ header .swords{width:30px;height:30px;vertical-align:-6px;margin-right:4px;filte
 .theme-a .dc .bar,.theme-b .dc .bar{line-height:1.25}
 .theme-a .dc.sel,.theme-a .dc.sel.mine{background-size:15px,auto!important;background-position:right 3px top 4px,0 0!important}
 
+/* ---- 주간 모집 ---- */
+.round .rhead{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.round .rhead b{font-size:15px}
+.round .rhead small{color:var(--muted);font-size:12px}
+.rstat{margin-left:auto;font-size:11px;font-weight:700;border-radius:999px;padding:2px 9px;background:var(--line);color:var(--muted)}
+.rstat.on{background:var(--accent);color:#fff}
+.rconf{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 2px}
+.rconf .go{font-size:12px;font-weight:700;border-radius:8px;padding:5px 9px;background:var(--cs);color:var(--c)}
+.rgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-top:10px}
+.rday{position:relative;overflow:hidden;border-radius:10px;padding:6px 0 5px;display:flex;flex-direction:column;align-items:center;gap:1px;border:1px solid var(--line);background:var(--bg)}
+.rday::before{content:"";position:absolute;left:0;right:0;bottom:0;height:calc(var(--h) * 100%);background:color-mix(in srgb,var(--accent) 28%,transparent);z-index:0}
+.rday>*{position:relative;z-index:1}
+.rday .w{font-size:12px;font-weight:700}.rday.sun .w{color:var(--danger)}.rday.sat .w{color:var(--glenn)}
+.rday .dt{font-size:10px;color:var(--muted)}
+.rday .c{font-size:15px;font-weight:700}
+.rday.me{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+.rday.sel{outline:2px solid var(--accent);outline-offset:1px}
+.rwho{margin-top:10px;font-size:13px;background:var(--bg);border-radius:10px;padding:8px 10px}
+.rwho ul{margin:6px 0 0;padding-left:18px}.rwho li{margin:2px 0}.rwho small,.rmine small,.cfp small{color:var(--muted)}
+.rmeta{font-size:12px;color:var(--muted);margin-top:8px}
+.rmine{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:13px}
+.rmine .btn{margin-left:auto}
+.radmin{display:flex;gap:8px;margin-top:10px}
+.anchips button{display:flex;flex-direction:column;align-items:center;min-width:44px;padding:6px 9px}
+.anchips button small{font-size:10px;margin:0;opacity:.75}
+.cfd{border-top:1px solid var(--line);padding:12px 0 6px}
+.cfd h3{margin:0 0 8px;font-size:15px;color:var(--c)}
+.cfp{margin-top:10px;font-size:13px;background:var(--bg);border-radius:10px;padding:8px 10px}
+.cfp ul{list-style:none;margin:6px 0 0;padding:0}.cfp li{margin:4px 0}
+.cfp input{width:17px;height:17px;vertical-align:-3px;accent-color:var(--accent)}
+.cfrow{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--bg)}
+.cfrow small{display:block;color:var(--muted);font-size:12px}
+.cfrow span{display:flex;gap:6px}
+.theme-a .round,.theme-b .round{margin-top:4px}
+.theme-a .rday{background:rgba(255,255,255,.6);border-color:rgba(255,255,255,.9)}
+.theme-b .rday{background:rgba(255,255,255,.04)}
+.theme-b .rstat.on{background:var(--gold);color:#1b1e4c}
+
 .theme-b .chips button.on{background:var(--gold);border-color:var(--gold);color:#1b1e4c}
 .theme-b .toast{background:var(--gold);color:#1b1e4c}
 .theme-b .detect.ok{color:#cfe0ff}
@@ -514,7 +552,7 @@ const dlabel=s=>{const d=parseYmd(s);return `${d.getMonth()+1}월 ${d.getDate()}
 
 const today0=new Date();
 const S={db:null,user:null,uid:null,canWrite:true,isOwner:false,
-  members:{},events:[],joins:[],comments:[],admins:[],adminsLoaded:false,profiles:{},asked:new Set(),
+  members:{},events:[],joins:[],comments:[],admins:[],adminsLoaded:false,rounds:[],answers:[],rsel:null,leader:null,sub:null,profiles:{},asked:new Set(),
   tab:'cal',month:new Date(today0.getFullYear(),today0.getMonth(),1),sel:ymd(today0),
   loaded:false,slow:false,offline:false,busy:false};
 
@@ -691,6 +729,7 @@ function renderCal(){
   const todayS=ymd(new Date());
   const isThis=y===today0.getFullYear()&&mo===today0.getMonth();
   let h=`<div class="legend">${DUNGEONS.map(d=>`<span style="${cvars(d)}">${d.key}</span>`).join('')}</div>`;
+  h+=renderRound();
   h+=`<div class="cal"><div class="calnav"><button class="iconbtn" data-act="mon" data-n="-1">‹</button>
     <div class="lbl">${y}년 ${mo+1}월${isThis?'':`<button class="today-btn" data-act="mon" data-n="0">오늘</button>`}</div>
     <button class="iconbtn" data-act="mon" data-n="1">›</button></div><div class="wk">`;
@@ -746,10 +785,10 @@ function renderMembers(){
     total:S.joins.filter(j=>j.uid===u).length})).sort((a,b)=>a.name.localeCompare(b.name,'ko'));
   let h=`<div class="card"><h3>길드원 ${list.length}명</h3>`;
   h+=list.length?list.map(m=>`<div class="mem"><div class="av">${esc(m.name.slice(0,1))}</div>
-    <div class="n"><b>${esc(m.name)}</b>${S.admins.includes(m.u)?'<span class="tag">길드장</span>':''}${m.u===S.uid?'<span class="tag">나</span>':''}<small>${esc(m.cls||'직업 미입력')}</small></div>
+    <div class="n"><b>${esc(m.name)}</b>${roleOf(m.u)?`<span class="tag">${roleOf(m.u)}</span>`:''}${m.u===S.uid?'<span class="tag">나</span>':''}<small>${esc(m.cls||'직업 미입력')}</small></div>
     <div class="st">예정 ${m.up}회</div>${S.isOwner&&writable()&&m.u!==S.uid?`<button class="btn sec" style="margin-left:8px;padding:6px 10px" data-act="madmin" data-u="${esc(m.u)}">관리</button>`:''}</div>`).join(''):`<p class="hint" style="margin:0">아직 아무도 없어요.</p>`;
   h+=`</div>`;
-  if(S.adminsLoaded&&!S.admins.length&&writable())h+=`<div class="card"><h3>👑 길드장이 아직 없어요</h3><p class="hint">길드장은 다른 사람의 파티, 이름, 댓글을 지우고 파티에서 사람을 뺄 수 있어요. 처음 누른 사람이 길드장이 되니, 길드장 본인이 눌러 주세요.</p><button class="btn pri" data-act="claim-admin">내가 길드장 하기</button></div>`;
+  if(S.adminsLoaded&&!S.admins.length&&writable())h+=`<div class="card"><h3>👑 길드장이 아직 없어요</h3><p class="hint">길드장은 주간 모집을 열고 확정하며, 부길드장을 지정할 수 있어요. 처음 누른 사람이 길드장이 되니 길드장 본인이 눌러 주세요.</p><button class="btn pri" data-act="claim-admin">내가 길드장 하기</button></div>`;
   const mine=S.events.filter(e=>evEnd(e).getTime()>nowT&&joinsOf(e.id).some(j=>j.uid===S.uid)).sort((a,b)=>(a.date+(a.time||'99')).localeCompare(b.date+(b.time||'99')));
   if(S.uid){h+=`<div class="card"><h3>내 참여 예정</h3>${mine.length?mine.map(e=>{const d=dun(e.content);
     return `<div class="mem" style="cursor:pointer" data-act="goto" data-k="${e.date}"><div class="av" style="${cvars(d)};background:var(--cs);color:var(--c)">${esc(d.short.slice(0,1))}</div>
@@ -873,6 +912,154 @@ function openLogin(){
   setTimeout(()=>$('#lf [name=lid]')?.focus(),50);
 }
 
+/* ---------- 주간 모집 (응답 → 길드장 확정) ---------- */
+const WDK=['일','월','화','수','목','금','토'];
+const sd=d=>`${d.getMonth()+1}/${d.getDate()}`;
+const isLeader=()=>!!S.uid&&S.leader===S.uid;
+const roleOf=u=>u&&u===S.leader?'길드장':u&&u===S.sub?'부길드장':'';
+function rDays(r){const s=parseYmd(r.start);return [0,1,2,3,4,5,6].map(o=>{const d=addDays(s,o);return{off:o,date:ymd(d),d,wd:d.getDay()}})}
+function curRound(){
+  const td=ymd(new Date());
+  const rs=[...S.rounds].sort((a,b)=>String(b.start).localeCompare(String(a.start)));
+  return rs.find(r=>r.status==='open')||rs.find(r=>ymd(addDays(parseYmd(r.start),6))>=td)||null;
+}
+const ansOf=r=>S.answers.filter(a=>a.roundId===r.id).sort((a,b)=>(a.at||0)-(b.at||0));
+const myAns=r=>S.answers.find(a=>a.roundId===r.id&&a.uid===S.uid);
+// 글로 쓴 가능 요일 알아듣기: "목금일월화수", "평일 8시 이후 주말 종일", "목,토 가능", "월~금"
+function parseAvail(text){
+  let t=String(text||'');const set=new Set();const W={'일':0,'월':1,'화':2,'수':3,'목':4,'금':5,'토':6};
+  if(/매일|전부|아무\s*때나|다\s*가능|언제든|상관\s*없|이즈\s*프리|올\s*프리|풀\s*프리|프리해|프리함/.test(t))[0,1,2,3,4,5,6].forEach(x=>set.add(x));
+  if(/평일/.test(t))[1,2,3,4,5].forEach(x=>set.add(x));
+  if(/주말/.test(t))[0,6].forEach(x=>set.add(x));
+  t=t.replace(/평일|주말|하루\s*종일|종일|매일|일정|일찍|일단|일요일/g,m=>m==='일요일'?'일요일':' ');
+  t=t.replace(/([월화수목금토일])(?:요일|욜)?\s*[~\-]\s*([월화수목금토일])(?:요일|욜)?/g,(m,a,b)=>{let x=W[a];for(let i=0;i<7;i++){set.add(x);if(x===W[b])break;x=(x+1)%7}return ' '});
+  for(const m of t.matchAll(/[월화수목금토일](?:요일|욜)?(?:\s*[,/·.]?\s*[월화수목금토일](?:요일|욜)?)+/g))for(const ch of m[0].replace(/요일|욜/g,''))if(ch in W)set.add(W[ch]);
+  for(const m of t.matchAll(/([월화수목금토일])(?:요일|욜)/g))set.add(W[m[1]]);
+  for(const m of t.matchAll(/(?:^|\s)([월화수목금토일])(?=\s*(?:가능|만|,|$|\s))/g))set.add(W[m[1]]);
+  return set;
+}
+function renderRound(){
+  const r=curRound();
+  if(!r){
+    if(S.isOwner&&writable())return `<div class="card round"><div class="rhead"><b>📢 주간 모집</b></div><p class="hint" style="margin:6px 0 10px">모집을 열면 길드원들이 가능한 요일을 답하고, 길드장·부길드장이 확정해요.</p><button class="btn pri" data-act="round-new">이번 주 모집 열기</button></div>`;
+    return '';
+  }
+  const days=rDays(r),as=ansOf(r),mine=myAns(r),open=r.status==='open';
+  const cnt=days.map(d=>as.filter(a=>(a.days||[]).includes(d.off)).length),mx=Math.max(1,...cnt);
+  let h=`<div class="card round"><div class="rhead"><b>📢 ${open?'주간 모집':'확정된 일정'}</b><small>${sd(days[0].d)}(${WDK[days[0].wd]}) ~ ${sd(days[6].d)}(${WDK[days[6].wd]})</small><span class="rstat ${open?'on':''}">${open?'모집 중':'확정'}</span></div>`;
+  if(r.confirmed&&r.confirmed.length){
+    h+=`<div class="rconf">${r.confirmed.map(c=>{const d=dun(c.dungeon);const ev=S.events.find(e=>e.id===c.eventId);const n=ev?joinsOf(ev.id).length:c.n||0;
+      return `<button class="go" style="${cvars(d)}" data-act="goto" data-k="${c.date}">⚔ ${esc(d.short)} · ${shortDate(c.date)} ${esc(c.time||'미정')} · ${n}명</button>`}).join('')}</div>`;
+  }
+  h+=`<div class="rgrid">${days.map((d,i)=>`<button class="rday ${S.rsel===d.off?'sel':''} ${mine&&(mine.days||[]).includes(d.off)?'me':''} ${d.wd===0?'sun':d.wd===6?'sat':''}" data-act="rday" data-o="${d.off}" style="--h:${(cnt[i]/mx).toFixed(2)}">
+    <span class="w">${WDK[d.wd]}</span><span class="dt">${sd(d.d)}</span><span class="c">${cnt[i]}</span></button>`).join('')}</div>`;
+  if(S.rsel!=null){const d=days[S.rsel];const who=as.filter(a=>(a.days||[]).includes(S.rsel));
+    h+=`<div class="rwho"><b>${WDK[d.wd]} ${sd(d.d)}</b> · ${who.length}명${who.length?`<ul>${who.map(a=>`<li>${esc(nameOf(a.uid))}${a.memo?` <small>${esc(a.memo)}</small>`:''}</li>`).join('')}</ul>`:'<p class="hint" style="margin:4px 0 0">가능한 사람이 없어요</p>'}</div>`}
+  h+=`<div class="rmeta">응답 ${as.length}명`;
+  if(S.isOwner){const ids=new Set(as.map(a=>a.uid));const no=Object.values(S.members).filter(m=>m.name&&!ids.has(m.uid));if(no.length&&open)h+=` · <span class="muted">미응답: ${no.map(m=>esc(m.name)).join(', ')}</span>`}
+  h+=`</div>`;
+  if(open&&writable()){
+    h+=`<div class="rmine">${mine?`내 응답: <b>${(mine.days||[]).length?days.filter(d=>mine.days.includes(d.off)).map(d=>WDK[d.wd]).join('·'):'이번엔 어려워요'}</b>${mine.memo?` <small>${esc(mine.memo)}</small>`:''}`:'아직 답하지 않았어요'}
+      <button class="btn ${mine?'sec':'pri'}" data-act="ans">${mine?'수정':'가능 요일 답하기'}</button></div>`;
+  }
+  if(S.isOwner&&writable()){
+    h+=`<div class="radmin">${open?`<button class="btn pri" data-act="round-confirm">확정하기</button>`:`<button class="btn sec" data-act="round-new">새 모집 열기</button>`}
+      <button class="btn danger" data-act="round-del" data-id="${esc(r.id)}">${open?'모집 취소':'목록에서 지우기'}</button></div>`;
+  }
+  return h+`</div>`;
+}
+function nextThursday(){const t=new Date();const d=new Date(t.getFullYear(),t.getMonth(),t.getDate());const k=(4-d.getDay()+7)%7;return addDays(d,k)}
+function openRoundNew(){
+  $('#modal').innerHTML=`<div class="sheet-bg" data-act="close-bg"><form class="sheet" id="rnf">
+    <h2>📢 주간 모집 열기</h2><p class="sub">길드원들이 가능한 요일을 답하면, 길드장·부길드장이 확정해요.</p>
+    <div class="f"><label>시작일 (7일 동안)</label><input type="date" name="start" required value="${ymd(nextThursday())}"></div>
+    <p class="hint">기본은 이번 목요일부터 다음 주 수요일까지예요.</p>
+    <div class="acts"><button type="button" class="btn ghost" data-act="close">취소</button><button class="btn pri">모집 열기</button></div></form></div>`;
+  $('#rnf').onsubmit=async e=>{e.preventDefault();const start=String(new FormData(e.target).get('start'));if(!/^\d{4}-\d{2}-\d{2}$/.test(start))return;
+    const ref=S.db.collection('rounds').doc();const body={start,status:'open',by:S.uid,at:Date.now(),confirmed:[]};
+    if(await guard(ref.set(body),'모집을 열었어요')){S.rounds=[...S.rounds.filter(x=>x.id!==ref.id),{...body,id:ref.id}];closeModal();S.tab='cal';render()}};
+}
+const AN={days:new Set(),touched:false};
+function openAnswer(){
+  const r=curRound();if(!r)return;const mine=myAns(r);const days=rDays(r);
+  AN.days=new Set(mine?.days||[]);AN.touched=!!mine;
+  const draw=()=>{$('#anDays').innerHTML=days.map(d=>`<button type="button" class="${AN.days.has(d.off)?'on':''}" data-act="an-day" data-o="${d.off}">${WDK[d.wd]}<small>${sd(d.d)}</small></button>`).join('')};
+  $('#modal').innerHTML=`<div class="sheet-bg" data-act="close-bg"><form class="sheet" id="anf">
+    <h2>가능한 요일</h2><p class="sub">${sd(days[0].d)} ~ ${sd(days[6].d)} · 글렌·브리 공통이에요</p>
+    <div class="f"><div class="chips anchips" id="anDays"></div></div>
+    <div class="f"><label>메모 (시간 등 · 글로 쓰면 요일도 자동으로 골라져요)</label><textarea name="memo" rows="2" maxlength="100" placeholder="예) 평일 8시 이후, 주말 종일">${esc(mine?.memo||'')}</textarea></div>
+    <div class="acts"><button type="button" class="btn ghost" data-act="close">취소</button>${mine?'':''}<button class="btn pri">저장</button></div>
+  </form></div>`;
+  draw();
+  $('#anf [name=memo]').oninput=e=>{if(AN.touched)return;const set=parseAvail(e.target.value);AN.days=new Set(days.filter(d=>set.has(d.wd)).map(d=>d.off));draw()};
+  AN.redraw=draw;
+  $('#anf').onsubmit=async e=>{e.preventDefault();const memo=String(new FormData(e.target).get('memo')||'').trim().slice(0,100);
+    const body={roundId:r.id,uid:S.uid,days:[...AN.days].sort((a,b)=>a-b),memo,at:mine?.at||Date.now()};
+    const id=safe(r.id)+'__'+safe(S.uid);
+    if(await guard(S.db.collection('answers').doc(id).set(body),'응답했어요')){S.answers=[...S.answers.filter(a=>a._id!==id),{...body,_id:id}];closeModal();render()}};
+}
+// 확정 시트
+const CF={};
+function openConfirm(){
+  const r=curRound();if(!r)return;
+  for(const d of DUNGEONS)if(!CF[d.key]||CF[d.key].round!==r.id)CF[d.key]={round:r.id,days:new Set(),time:'21:00',picks:{}};
+  drawConfirm(r);
+}
+function drawConfirm(r){
+  const days=rDays(r),as=ansOf(r);
+  const avail=o=>as.filter(a=>(a.days||[]).includes(o));
+  let h=`<div class="sheet-bg" data-act="close-bg"><form class="sheet" id="cff"><h2>✅ 일정 확정</h2><p class="sub">던전마다 요일과 시간을 고르세요. 그 요일이 된다고 답한 사람이 자동으로 들어가요(최대 ${DEFAULT_MAX}명).</p>`;
+  for(const dg of DUNGEONS){const c=CF[dg.key];
+    h+=`<div class="cfd" style="${cvars(dg)}"><h3>⚔ ${esc(dg.key)}</h3>
+      <div class="chips anchips">${days.map(d=>`<button type="button" class="${c.days.has(d.off)?'on':''}" data-act="cf-day" data-g="${esc(dg.key)}" data-o="${d.off}">${WDK[d.wd]} ${avail(d.off).length}<small>${sd(d.d)}</small></button>`).join('')}</div>
+      <div class="chips" style="margin-top:8px">${TIMES.map(t=>`<button type="button" class="${c.time===t?'on':''}" data-act="cf-time" data-g="${esc(dg.key)}" data-v="${t}">${t}</button>`).join('')}</div>`;
+    for(const o of [...c.days].sort((a,b)=>a-b)){const d=days[o];const av=avail(o);
+      if(!c.picks[o])c.picks[o]=new Set(av.slice(0,DEFAULT_MAX).map(a=>a.uid));
+      h+=`<div class="cfp"><b>${WDK[d.wd]} ${sd(d.d)} ${c.time}</b> · ${c.picks[o].size}/${DEFAULT_MAX}명
+        ${av.length?`<ul>${av.map(a=>`<li><label><input type="checkbox" data-act="cf-pick" data-g="${esc(dg.key)}" data-o="${o}" data-u="${esc(a.uid)}" ${c.picks[o].has(a.uid)?'checked':''}> ${esc(nameOf(a.uid))}${a.memo?` <small>${esc(a.memo)}</small>`:''}</label></li>`).join('')}</ul>`:'<p class="hint" style="margin:4px 0">이 요일에 된다고 한 사람이 없어요</p>'}</div>`}
+    h+=`</div>`}
+  h+=`<p class="ferr" id="cfErr"></p><div class="acts"><button type="button" class="btn ghost" data-act="close">취소</button><button class="btn pri">확정하고 캘린더에 올리기</button></div></form></div>`;
+  const sc=$('#cff')?.scrollTop||0;
+  $('#modal').innerHTML=h;$('#cff').scrollTop=sc;
+  $('#cff').onsubmit=async e=>{e.preventDefault();await doConfirm(r)};
+}
+async function doConfirm(r){
+  const days=rDays(r);const plan=[];
+  for(const dg of DUNGEONS){const c=CF[dg.key];for(const o of [...c.days].sort((a,b)=>a-b))plan.push({dungeon:dg.key,date:days[o].date,time:c.time,uids:[...(c.picks[o]||[])]})}
+  if(!plan.length){$('#cfErr').textContent='확정할 요일을 하나 이상 골라 주세요.';return}
+  if(plan.some(p=>p.uids.length>DEFAULT_MAX)){$('#cfErr').textContent=`한 파티는 ${DEFAULT_MAX}명까지예요. 체크를 줄여 주세요.`;return}
+  const btn=$('#cff button.pri');btn.disabled=true;btn.textContent='올리는 중…';
+  const confirmed=[...(r.confirmed||[])];let fail=0;
+  for(const p of plan){
+    const ref=S.db.collection('events').doc();
+    const ev={content:p.dungeon,date:p.date,time:p.time,max:DEFAULT_MAX,memo:'주간 모집 확정',by:S.uid,at:Date.now(),round:r.id};
+    if(!await guard(ref.set(ev))){fail++;continue}
+    S.events=[...S.events,{...ev,id:ref.id}];
+    for(const u of p.uids){const jid=safe(ref.id)+'__'+safe(u);
+      try{await S.db.collection('joins').doc(jid).set({eventId:ref.id,uid:u,at:Date.now(),auto:true});S.joins=[...S.joins,{_id:jid,eventId:ref.id,uid:u,auto:true}]}catch(e){console.error(e);fail++}}
+    confirmed.push({dungeon:p.dungeon,date:p.date,time:p.time,eventId:ref.id,n:p.uids.length});
+  }
+  await guard(S.db.collection('rounds').doc(safe(r.id)).set({...stripId(r),status:'closed',confirmed,closedAt:Date.now()}));
+  closeModal();toast(fail?'일부를 올리지 못했어요 — Firebase 규칙을 확인해 주세요':`확정했어요 · 파티 ${plan.length}개`);
+  if(plan[0]){S.sel=plan[0].date;const d=parseYmd(plan[0].date);S.month=new Date(d.getFullYear(),d.getMonth(),1)}
+  render();
+}
+const stripId=o=>{const x={...o};delete x.id;delete x._id;return x};
+// 자동으로 들어간 파티: 휴대폰 캘린더를 켠 사람에게만 한 번 물어보기
+function checkAutoCal(){
+  if(!calPref().on||!S.loaded||$('#modal').innerHTML)return;
+  let off={};try{off=JSON.parse(localStorage.getItem('guild.calOffered')||'{}')||{}}catch(_){}
+  const now=Date.now();
+  const evs=S.events.filter(e=>evEnd(e).getTime()>now&&!off[e.id]&&S.joins.some(j=>j.eventId===e.id&&j.uid===S.uid&&j.auto)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  if(!evs.length)return;
+  evs.forEach(e=>off[e.id]=1);try{localStorage.setItem('guild.calOffered',JSON.stringify(off))}catch(_){}
+  $('#modal').innerHTML=`<div class="sheet-bg" data-act="close-bg"><div class="sheet">
+    <h2>📲 확정된 파티가 있어요</h2><p class="sub">길드장이 확정한 파티에 자동으로 들어갔어요. 휴대폰 캘린더에 넣을까요?</p>
+    <div class="calopt">${evs.map(e=>{const d=dun(e.content);return `<div class="cfrow"><div><b>⚔ ${esc(d.key)}</b><small>${dlabel(e.date)} · ${esc(e.time||'시간 미정')}</small></div>
+      <span><button class="btn sec" data-act="cal-ics" data-id="${esc(e.id)}" data-keep="1">기본</button><button class="btn sec" data-act="cal-g" data-id="${esc(e.id)}" data-keep="1">구글</button></span></div>`}).join('')}</div>
+    <div class="acts" style="margin-top:12px"><button class="btn pri" data-act="close">닫기</button></div></div></div>`;
+}
+
 /* ---------- 휴대폰 캘린더 (선택 기능) ---------- */
 const CAL_KEY='guild.cal';
 function calPref(){try{const p=JSON.parse(localStorage.getItem(CAL_KEY)||'{}');return{on:!!p.on,alarm:Number.isFinite(p.alarm)?p.alarm:30}}catch(_){return{on:false,alarm:30}}}
@@ -933,16 +1120,25 @@ async function wipeUser(uid){
   const m={...S.members};delete m[uid];S.members=m;return true;
 }
 function openMemberAdmin(u){
-  const isA=S.admins.includes(u),n=nameOf(u);
+  const n=nameOf(u),role=roleOf(u),lead=isLeader();
+  let roles='';
+  if(lead){
+    roles=`<div class="calopt">${u===S.sub?`<button data-act="unset-sub" data-u="${esc(u)}">🌙 부길드장 해제<small>일반 길드원이 돼요</small></button>`
+      :`<button data-act="set-sub" data-u="${esc(u)}">🌙 부길드장으로 지정<small>${S.sub?`지금 부길드장(${esc(nameOf(S.sub))})은 일반 길드원이 돼요`:'주간 모집 확정과 정리를 함께 할 수 있어요'}</small></button>`}
+      <button data-act="transfer" data-u="${esc(u)}">👑 길드장 넘기기<small>${esc(n)}님이 길드장이 되고, 나는 부길드장이 돼요</small></button></div>`;
+  }
   $('#modal').innerHTML=`<div class="sheet-bg" data-act="close-bg"><div class="sheet">
-    <h2>${esc(n)}</h2><p class="sub">${esc(S.members[u]?.cls||'직업 미입력')} · 참여 ${S.joins.filter(j=>j.uid===u).length}회</p>
-    <div class="calopt">
-      <button data-act="toggle-admin" data-u="${esc(u)}">👑 ${isA?'길드장에서 해제':'길드장으로 지정'}<small>길드장은 다른 사람의 파티·이름·댓글을 지울 수 있어요</small></button>
-    </div>
-    <div class="sect"><h3>삭제</h3><p class="hint">이 사람의 이름, 참여 기록, 댓글, 혼자 있는 파티를 지워요. 중복으로 등록된 이름을 정리할 때 쓰세요.</p>
-      <button class="dz" data-act="mdel" data-u="${esc(u)}">이름과 참여 기록 삭제</button></div>
+    <h2>${esc(n)}${role?` <span class="tag">${role}</span>`:''}</h2><p class="sub">${esc(S.members[u]?.cls||'직업 미입력')} · 참여 ${S.joins.filter(j=>j.uid===u).length}회</p>
+    ${roles}
+    <div class="sect"><h3>삭제</h3>${role?`<p class="hint">길드장·부길드장은 먼저 역할을 해제해야 지울 수 있어요.</p>`:`<p class="hint">이 사람의 이름, 참여 기록, 댓글, 혼자 있는 파티를 지워요. 중복으로 등록된 이름을 정리할 때 쓰세요.</p>
+      <button class="dz" data-act="mdel" data-u="${esc(u)}">이름과 참여 기록 삭제</button>`}</div>
     <div class="acts" style="margin-top:12px"><button class="btn ghost" data-act="close">닫기</button></div>
   </div></div>`;
+}
+async function saveRoles(leader,sub,msg){
+  const body={leader,sub:sub||null,uids:[leader,sub].filter(Boolean)};
+  if(await guard(S.db.collection('meta').doc('admins').set(body),msg)){S.leader=leader;S.sub=sub||null;S.admins=body.uids;S.isOwner=S.admins.includes(S.uid);closeModal();render();return true}
+  return false;
 }
 
 /* ---------- 도움말 ---------- */
@@ -953,6 +1149,8 @@ function openHelp(){
     <p><b>홈 화면에 추가</b>한 아이콘으로 열고, 오른쪽 위 <b>캐릭터 등록</b>에서 캐릭터명과 아이디를 만들어요. 링크로 열면 보기만 할 수 있어요.</p>
     <h3>🔐 아이디</h3>
     <p>캐릭터 등록 때 만든 아이디로 로그인하면, 앱을 다시 설치하거나 폰을 바꿔도 캐릭터가 그대로 돌아와요.</p>
+    <h3>📢 주간 모집</h3>
+    <p>길드장·부길드장이 모집을 열면 캘린더 위에 카드가 떠요. <b>가능 요일 답하기</b>에서 요일을 누르거나 "평일 8시 이후, 주말 종일"처럼 글로 쓰면 돼요. 길드장·부길드장이 확정하면 그 요일이 된다고 한 사람이 파티에 자동으로 들어가요.</p>
     <h3>📅 캘린더로 신청</h3>
     <p>날짜 누르기 → <b>이 날 참여 신청</b> → 던전·시간 고르기. 같은 날·던전·시간 파티가 있으면 자동으로 합류해요.</p>
     <h3>💬 댓글로 신청</h3>
@@ -1005,25 +1203,39 @@ document.addEventListener('click',async e=>{
     case'login':if(S.db&&S.browserOk)openLogin();break;
     case'browser-ok':try{localStorage.setItem('guild.browser','1')}catch(_){}S.browserOk=true;render();break;
     case'cal':{const ev=S.events.find(x=>x.id===el.dataset.id);if(ev)openCal(ev);break}
-    case'cal-ics':{const ev=S.events.find(x=>x.id===el.dataset.id);if(ev){downloadIcs(ev);closeModal()}break}
-    case'cal-g':{const ev=S.events.find(x=>x.id===el.dataset.id);if(ev){openGoogle(ev);closeModal()}break}
+    case'cal-ics':{const ev=S.events.find(x=>x.id===el.dataset.id);if(ev){downloadIcs(ev);if(!el.dataset.keep)closeModal();else{el.textContent='추가함';el.disabled=true}}break}
+    case'cal-g':{const ev=S.events.find(x=>x.id===el.dataset.id);if(ev){openGoogle(ev);if(!el.dataset.keep)closeModal();else{el.textContent='추가함';el.disabled=true}}break}
     case'kick':{
       if(delArm!==el.dataset.id){delArm=el.dataset.id;el.classList.add('armed');setTimeout(()=>{if(delArm===el.dataset.id){delArm=null;el.classList.remove('armed')}},3000);toast('한 번 더 누르면 파티에서 빼요');return}
       delArm=null;await guard(S.db.collection('joins').doc(safe(el.dataset.id)).delete(),'파티에서 뺐어요');break}
     case'claim-admin':{el.disabled=true;
-      if(await guard(S.db.collection('meta').doc('admins').set({uids:[S.uid]}),'길드장이 됐어요 👑')){S.admins=[S.uid];S.isOwner=true;render()}else el.disabled=false;break}
+      if(await guard(S.db.collection('meta').doc('admins').set({leader:S.uid,sub:null,uids:[S.uid]}),'길드장이 됐어요 👑')){S.leader=S.uid;S.sub=null;S.admins=[S.uid];S.isOwner=true;render()}else el.disabled=false;break}
+    case'set-sub':if(isLeader())await saveRoles(S.uid,el.dataset.u,'부길드장으로 지정했어요');break;
+    case'unset-sub':if(isLeader())await saveRoles(S.uid,null,'부길드장을 해제했어요');break;
+    case'transfer':{
+      if(delArm!=='t:'+el.dataset.u){delArm='t:'+el.dataset.u;el.classList.add('armed');toast('한 번 더 누르면 길드장을 넘겨요');setTimeout(()=>{if(delArm==='t:'+el.dataset.u){delArm=null;el.classList.remove('armed')}},3000);return}
+      delArm=null;if(isLeader())await saveRoles(el.dataset.u,S.uid,'길드장을 넘겼어요');break}
+    case'round-new':if(S.isOwner)openRoundNew();break;
+    case'round-confirm':if(S.isOwner)openConfirm();break;
+    case'round-del':{
+      if(delArm!=='r:'+el.dataset.id){delArm='r:'+el.dataset.id;el.textContent='한 번 더 누르면 지워요';setTimeout(()=>{if(delArm==='r:'+el.dataset.id){delArm=null;render()}},3000);return}
+      delArm=null;const id=el.dataset.id;
+      if(await guard(S.db.collection('rounds').doc(safe(id)).delete(),'지웠어요')){for(const a of S.answers.filter(a=>a.roundId===id)){try{await S.db.collection('answers').doc(a._id).delete()}catch(_){}}S.rounds=S.rounds.filter(r=>r.id!==id);render()}break}
+    case'rday':{const o=+el.dataset.o;S.rsel=S.rsel===o?null:o;render();break}
+    case'ans':if(writable())needName(openAnswer);break;
+    case'an-day':{const o=+el.dataset.o;AN.touched=true;AN.days.has(o)?AN.days.delete(o):AN.days.add(o);AN.redraw&&AN.redraw();break}
+    case'cf-day':{const c=CF[el.dataset.g],o=+el.dataset.o;c.days.has(o)?c.days.delete(o):c.days.add(o);drawConfirm(curRound());break}
+    case'cf-time':{CF[el.dataset.g].time=el.dataset.v;drawConfirm(curRound());break}
+    case'cf-pick':{const c=CF[el.dataset.g],o=+el.dataset.o,u=el.dataset.u;const st=c.picks[o];el.checked?st.add(u):st.delete(u);drawConfirm(curRound());break}
     case'madmin':openMemberAdmin(el.dataset.u);break;
-    case'toggle-admin':{const u=el.dataset.u;const on=S.admins.includes(u);const next=on?S.admins.filter(x=>x!==u):[...S.admins,u].slice(0,10);
-      if(!next.length){toast('길드장은 최소 1명 있어야 해요');break}
-      if(await guard(S.db.collection('meta').doc('admins').set({uids:next}),on?'길드장에서 해제했어요':'길드장으로 지정했어요')){S.admins=next;closeModal();render()}break}
-    case'mdel':{
+        case'mdel':{
       if(delArm!=='m:'+el.dataset.u){delArm='m:'+el.dataset.u;el.classList.add('armed');el.textContent='한 번 더 누르면 삭제';setTimeout(()=>{if(delArm==='m:'+el.dataset.u){delArm=null;el.classList.remove('armed');el.textContent='이름과 참여 기록 삭제'}},3000);return}
       delArm=null;el.disabled=true;if(await wipeUser(el.dataset.u)){closeModal();toast('삭제했어요')}else el.disabled=false;render();break}
     case'delme':{
-      if(S.admins.includes(S.uid)&&S.admins.length===1){toast('다른 길드장을 먼저 지정해 주세요');break}
+      if(S.leader===S.uid){toast('길드장을 먼저 다른 사람에게 넘겨 주세요');break}
+      if(S.sub===S.uid){toast('길드장에게 부길드장 해제를 부탁한 뒤 지울 수 있어요');break}
       if(delArm!=='me'){delArm='me';el.classList.add('armed');el.textContent='한 번 더 누르면 모두 삭제돼요';setTimeout(()=>{if(delArm==='me'){delArm=null;el.classList.remove('armed');el.textContent='내 정보 삭제'}},3000);return}
       delArm=null;el.disabled=true;
-      if(S.admins.includes(S.uid))await guard(S.db.collection('meta').doc('admins').set({uids:S.admins.filter(x=>x!==S.uid)}));
       if(await wipeUser(S.uid)){closeModal();toast('내 정보를 삭제했어요')}else el.disabled=false;render();break}
     case'cdel':{
       if(delArm!==el.dataset.id){delArm=el.dataset.id;el.textContent='정말 삭제?';setTimeout(()=>{if(delArm===el.dataset.id){delArm=null;el.textContent='삭제'}},3000);return}
@@ -1057,6 +1269,8 @@ async function cleanupPast(){
       for(const j of js.filter(j=>j.uid===S.uid))await del(S.db.collection('joins').doc(j._id).delete());
     }
   }
+  if(S.isOwner){const lim=ymd(addDays(new Date(),-21));
+    for(const r of S.rounds.filter(r=>r.start<lim)){await del(S.db.collection('rounds').doc(safe(r.id)).delete());for(const a of S.answers.filter(a=>a.roundId===r.id))await del(S.db.collection('answers').doc(a._id).delete())}}
   const old=Date.now()-30*864e5;
   for(const c of S.comments.filter(c=>c.uid===S.uid&&(c.at||0)<old))await del(S.db.collection('comments').doc(c._id).delete());
 }
@@ -1078,14 +1292,16 @@ async function cleanupPast(){
   const slowT=setTimeout(()=>{S.slow=true;render()},10000);
   const pending=new Set(['members','events','joins','comments']);
   const done=(n,s)=>{if(!s.metadata.fromCache&&pending.delete(n)){window.SPLASH&&SPLASH.step(45+(4-pending.size)*13,60+(4-pending.size)*13);if(!pending.size)window.SPLASH&&SPLASH.finish()}
-    if(!s.metadata.fromCache&&!pending.size&&!S.loaded_){S.loaded_=true;S.loaded=true;S.slow=false;clearTimeout(slowT);setTimeout(cleanupPast,1500)}if(s.metadata.fromCache&&!S.loaded&&s.docs.length){S.loaded=true}};
+    if(!s.metadata.fromCache&&!pending.size&&!S.loaded_){S.loaded_=true;S.loaded=true;S.slow=false;clearTimeout(slowT);setTimeout(()=>{cleanupPast();checkAutoCal()},1500)}if(s.metadata.fromCache&&!S.loaded&&s.docs.length){S.loaded=true}};
   const fail=n=>e=>{console.error(n,e);pending.delete(n);if(!pending.size){S.loaded=true;clearTimeout(slowT);window.SPLASH&&SPLASH.finish()}S.slow=false;
     if(e&&e.code==='permission-denied'){S.offline=true;S.offlineMsg='데이터를 읽을 권한이 없어요. Firestore 규칙과 익명 로그인 설정(안내서 2단계)을 확인해주세요.'}render()};
   const since=ymd(addDays(new Date(),-45));
   S.db.collection('members').onSnapshot(s=>{const o={};s.docs.forEach(d=>{const x=d.data();if(x&&x.uid)o[x.uid]=x});S.members=o;done('members',s);render()},fail('members'));
   S.db.collection('events').where('date','>=',since).onSnapshot(s=>{S.events=s.docs.map(d=>({...d.data(),id:d.id})).filter(e=>e.date);done('events',s);render()},fail('events'));
-  S.db.collection('joins').where('at','>=',Date.now()-120*864e5).onSnapshot(s=>{S.joins=s.docs.map(d=>({...d.data(),_id:d.id})).filter(j=>j.eventId&&j.uid);done('joins',s);render()},fail('joins'));
-  S.db.collection('meta').doc('admins').onSnapshot(s=>{const d=s.exists?s.data():null;S.admins=Array.isArray(d?.uids)?d.uids:[];S.isOwner=S.admins.includes(S.uid);S.adminsLoaded=true;render()},e=>{console.error('admins',e);S.adminsLoaded=true;render()});
+  S.db.collection('joins').where('at','>=',Date.now()-120*864e5).onSnapshot(s=>{S.joins=s.docs.map(d=>({...d.data(),_id:d.id})).filter(j=>j.eventId&&j.uid);done('joins',s);if(S.loaded_)setTimeout(checkAutoCal,800);render()},fail('joins'));
+  S.db.collection('meta').doc('admins').onSnapshot(s=>{const d=s.exists?s.data():null;const u=Array.isArray(d?.uids)?d.uids:[];S.leader=d?.leader||u[0]||null;S.sub=d?.leader?(d.sub||null):(u[1]||null);S.admins=[S.leader,S.sub].filter(Boolean);S.isOwner=S.admins.includes(S.uid);S.adminsLoaded=true;render()},e=>{console.error('admins',e);S.adminsLoaded=true;render()});
+  S.db.collection('rounds').where('start','>=',ymd(addDays(new Date(),-40))).onSnapshot(s=>{S.rounds=s.docs.map(d=>({...d.data(),id:d.id})).filter(r=>r.start);render()},e=>console.error('rounds',e));
+  S.db.collection('answers').where('at','>=',Date.now()-60*864e5).onSnapshot(s=>{S.answers=s.docs.map(d=>({...d.data(),_id:d.id})).filter(a=>a.roundId&&a.uid);render()},e=>console.error('answers',e));
   S.db.collection('comments').orderBy('at','desc').limit(60).onSnapshot(s=>{S.comments=s.docs.map(d=>({...d.data(),_id:d.id})).filter(c=>c.uid&&c.text);done('comments',s);render()},fail('comments'));
 }catch(e){console.error(e);window.SPLASH&&SPLASH.finish();S.offline=true;
   S.offlineMsg=e&&e.code==='auth/operation-not-allowed'||e&&e.code==='auth/admin-restricted-operation'?'Firebase에서 익명 로그인을 켜야 해요 (안내서 2단계).':'연결 중 문제가 생겼어요 ('+esc(e&&e.code||e&&e.message||'오류')+'). 인터넷 연결과 config.js를 확인해주세요.';render()}})();
