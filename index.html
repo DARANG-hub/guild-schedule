@@ -152,6 +152,10 @@ nav.tabs button.on{color:var(--accent);font-weight:700}
 .calopt{display:flex;flex-direction:column;gap:8px}
 .calopt button{border:1px solid var(--line);border-radius:12px;padding:13px;text-align:left;background:var(--bg);font-size:14px}
 .calopt button small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.banner.install{display:block;line-height:1.6}
+.banner .linkish{background:none!important;color:var(--gold)!important;text-decoration:underline;padding:4px 0!important;font-weight:500!important}
+.ferr{color:var(--danger);font-size:13px;margin:0 0 10px;min-height:0}
+.acct{font-size:13px;background:var(--accent-soft);color:var(--accent);border-radius:10px;padding:10px 12px}
 .toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 76px);transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:10px;font-size:13px;z-index:30;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1}
 </style>
@@ -176,7 +180,7 @@ nav.tabs button.on{color:var(--accent);font-weight:700}
 <script src="config.js"></script>
 <script type="module">
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import {getAuth,signInAnonymously} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import {getAuth,signInAnonymously,EmailAuthProvider,linkWithCredential,signInWithEmailAndPassword} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import {initializeFirestore,getFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,setDoc,deleteDoc,onSnapshot,query,orderBy,limit,where} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 // Firestore를 페이지 코드가 쓰는 형태로 감싼 작은 어댑터
@@ -240,15 +244,34 @@ function needProfiles(){
 const joinsOf=id=>S.joins.filter(j=>j.eventId===id).sort((a,b)=>(a.at||0)-(b.at||0));
 const maxOf=ev=>Math.max(1,Number(ev.max)||DEFAULT_MAX);
 const evsOn=date=>S.events.filter(e=>e.date===date).sort((a,b)=>(DUNGEONS.findIndex(d=>d.key===a.content)-DUNGEONS.findIndex(d=>d.key===b.content))||String(a.time||'99').localeCompare(String(b.time||'99')));
-const writable=()=>S.db&&S.uid&&S.canWrite!==false;
+const isStandalone=()=>{try{return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true}catch(_){return false}};
+const browserFlag=()=>{try{return localStorage.getItem('guild.browser')==='1'}catch(_){return false}};
+let AUTH=null,EMAIL_DOMAIN='guild.firebaseapp.com';
+const writable=()=>S.db&&S.uid&&S.canWrite!==false&&S.browserOk;
+const loginId=()=>{const e=AUTH?.currentUser?.email||'';return e.split('@')[0]};
+const toEmail=id=>id.toLowerCase()+'@'+EMAIL_DOMAIN;
+const ID_RE=/^[a-zA-Z0-9_]{4,20}$/;
+function authMsg(e){const c=e&&e.code||'';
+  if(c.includes('email-already-in-use')||c.includes('credential-already-in-use'))return '이미 누가 쓰고 있는 아이디예요. 다른 아이디를 써 주세요.';
+  if(c.includes('weak-password'))return '비밀번호는 6자 이상이어야 해요.';
+  if(c.includes('invalid-credential')||c.includes('wrong-password')||c.includes('user-not-found')||c.includes('invalid-email'))return '아이디 또는 비밀번호가 맞지 않아요.';
+  if(c.includes('operation-not-allowed'))return 'Firebase에서 "이메일/비밀번호" 로그인을 켜야 해요 (길드장에게 알려주세요).';
+  if(c.includes('too-many-requests'))return '시도가 너무 많아요. 잠시 후 다시 해 주세요.';
+  if(c.includes('network'))return '인터넷 연결을 확인해 주세요.';
+  return '문제가 생겼어요 ('+esc(c||'오류')+')';}
 
 /* ---------- 렌더 ---------- */
 function render(){
   const me=S.uid&&S.members[S.uid];
-  $('#meChip').innerHTML=me&&me.name?`🧙 <b>${esc(me.name)}</b>${me.cls?' · '+esc(me.cls):''}`:'🧙 캐릭터 등록';
+  $('#meChip').innerHTML=!S.browserOk?'👀 보기 전용':me&&me.name?`🧙 <b>${esc(me.name)}</b>${me.cls?' · '+esc(me.cls):''}`:'🧙 캐릭터 등록';
   let b='';
-  if(S.db&&S.canWrite===false)b=`<div class="banner"><span>저장할 수 없는 상태예요. 잠시 후 다시 열어주세요.</span></div>`;
-  else if(S.db&&S.uid&&S.loaded&&!(me&&me.name))b=`<div class="banner"><span>먼저 캐릭터명을 등록해 주세요.</span><button data-act="profile">등록</button></div>`;
+  if(S.db&&!S.browserOk)b=`<div class="banner install"><div><b>📲 홈 화면에 추가해서 써 주세요</b><br>
+    지금은 <b>보기만</b> 할 수 있어요. 홈 화면 아이콘으로 열면 캐릭터 등록과 신청을 할 수 있어요.<br>
+    <small>• 아이폰: Safari 공유 □↑ → 홈 화면에 추가<br>• 갤럭시: Chrome ⋮ 또는 삼성 인터넷 ≡ → 홈 화면에 추가</small><br>
+    <button class="linkish" data-act="browser-ok">PC라서 브라우저로 쓸게요</button></div></div>`;
+  else if(S.db&&S.canWrite===false)b=`<div class="banner"><span>저장할 수 없는 상태예요. 잠시 후 다시 열어주세요.</span></div>`;
+  else if(S.db&&S.uid&&S.loaded&&!(me&&me.name))b=`<div class="banner"><span>처음이면 <b>캐릭터 등록</b>, 전에 등록했다면 <b>로그인</b>해 주세요.</span><span style="display:flex;gap:6px"><button data-act="profile">등록</button><button data-act="login" style="background:var(--accent)">로그인</button></span></div>`;
+  else if(S.db&&S.loaded&&me&&me.name&&S.isAnon)b=`<div class="banner"><span>🔐 <b>아이디를 만들어 두세요.</b> 앱을 지웠다 다시 깔아도 캐릭터가 그대로 유지돼요.</span><button data-act="profile">만들기</button></div>`;
   if(S.slow&&!S.loaded)b+=`<div class="banner"><span>데이터에 연결하는 중이에요. 잠시만 기다려 주세요.</span></div>`;
   $('#banner').innerHTML=b;
   document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.toggle('on',x.dataset.tab===S.tab));
@@ -419,7 +442,7 @@ function eventCard(ev){
 }
 
 function renderMembers(){
-  const ids=new Set([...Object.keys(S.members),...S.joins.map(j=>j.uid)]);if(S.uid)ids.add(S.uid);
+  const ids=new Set([...Object.keys(S.members),...S.joins.map(j=>j.uid)]);
   const todayS=ymd(new Date());
   const nowT=Date.now();const upcoming=new Set(S.events.filter(e=>evEnd(e).getTime()>nowT).map(e=>e.id));
   const list=[...ids].map(u=>({u,name:nameOf(u),cls:S.members[u]?.cls||'',
@@ -448,17 +471,35 @@ function openProfile(after){
     <h2>내 캐릭터</h2><p class="sub">파티 목록에 이 이름으로 표시돼요.</p>
     <div class="f"><label>캐릭터명</label><input name="name" maxlength="20" required value="${esc(m.name||'')}" placeholder="캐릭터 이름"></div>
     <div class="f"><label>직업 / 재능 (선택)</label><input name="cls" maxlength="20" value="${esc(m.cls||'')}" placeholder="예: 근접, 마법, 힐러"></div>
+    <div class="sect"><h3>🔐 로그인 아이디</h3>
+      ${S.isAnon?`<p class="hint">앱을 지웠다 다시 설치하거나 다른 폰에서 쓸 때, 이 아이디로 로그인하면 내 캐릭터가 그대로 돌아와요.${m.name?'':' <b>처음 등록할 때 꼭 만들어 주세요.</b>'}</p>
+      <div class="row"><div class="f"><label>아이디 (영문·숫자 4~20자)</label><input name="lid" autocapitalize="off" autocorrect="off" autocomplete="username" maxlength="20" ${m.name?'':'required'} pattern="[A-Za-z0-9_]{4,20}"></div>
+      <div class="f"><label>비밀번호 (6자 이상)</label><input name="lpw" type="password" autocomplete="new-password" minlength="6" ${m.name?'':'required'}></div></div>
+      ${m.name?'':`<p class="hint">이미 아이디가 있나요? <button type="button" class="linkish" style="color:var(--accent);text-decoration:underline" data-act="login">로그인하기</button></p>`}`
+      :`<div class="acct">로그인 아이디: <b>${esc(loginId())}</b> · 다른 폰에서도 이 아이디로 로그인할 수 있어요.</div>`}
+    </div>
     <div class="sect"><h3>📲 휴대폰 캘린더</h3>
       <label class="sw"><span>참여한 파티를 내 캘린더에 추가하는<br>버튼 보이기</span><input type="checkbox" name="calOn" ${calPref().on?'checked':''}></label>
       <div class="f" style="margin-top:10px"><label>캘린더 알림</label><select name="calAlarm">${[[0,'알림 없음'],[10,'10분 전'],[30,'30분 전'],[60,'1시간 전'],[120,'2시간 전']].map(([v,t])=>`<option value="${v}" ${calPref().alarm===v?'selected':''}>${t}</option>`).join('')}</select></div>
       <p class="hint">이 휴대폰에만 적용돼요. 켜 두면 참여할 때 캘린더에 추가할지 물어봐요.</p></div>
+    <p class="ferr" id="pfErr"></p>
     <div class="acts"><button type="button" class="btn ghost" data-act="close">취소</button><button class="btn pri">저장</button></div>
     ${m.name?`<div class="sect"><h3>내 정보 삭제</h3><p class="hint">캐릭터명, 내 참여 기록, 내 댓글, 나 혼자 있는 파티를 모두 지워요. 되돌릴 수 없어요.</p><button type="button" class="dz" data-act="delme">내 정보 삭제</button></div>`:''}
   </form></div>`;
   $('#pf').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);
     setCalPref({on:!!f.get('calOn'),alarm:+f.get('calAlarm')||0});
     const name=String(f.get('name')).trim().slice(0,20),cls=String(f.get('cls')).trim().slice(0,20);if(!name)return;
-    if(await guard(S.db.collection('members').doc(safe(S.uid)).set({uid:S.uid,name,cls,at:Date.now()}),'저장했어요')){S.members={...S.members,[S.uid]:{uid:S.uid,name,cls}};closeModal();render();after&&after()}};
+    const err=$('#pfErr');err.textContent='';
+    const lid=String(f.get('lid')||'').trim(),lpw=String(f.get('lpw')||'');
+    if(S.isAnon&&(lid||lpw||!m.name)){
+      if(!ID_RE.test(lid)){err.textContent='아이디는 영문·숫자 4~20자로 만들어 주세요.';return}
+      if(lpw.length<6){err.textContent='비밀번호는 6자 이상이어야 해요.';return}
+      const btn=e.target.querySelector('button.pri');btn.disabled=true;
+      try{await linkWithCredential(AUTH.currentUser,EmailAuthProvider.credential(toEmail(lid),lpw));S.isAnon=false}
+      catch(x){console.error(x);err.textContent=authMsg(x);btn.disabled=false;return}
+    }
+    const body={uid:S.uid,name,cls,at:Date.now()};if(!S.isAnon&&loginId())body.login=loginId();
+    if(await guard(S.db.collection('members').doc(safe(S.uid)).set(body),'저장했어요')){S.members={...S.members,[S.uid]:body};closeModal();render();after&&after()}};
   setTimeout(()=>$('#pf [name=name]')?.focus(),50);
 }
 
@@ -514,6 +555,22 @@ async function submitApply(memo){
   const ev=await applyTo(A.date,A.dungeon,A.time,memo,`${dun(A.dungeon).key} 신청 완료!`);if(ev){closeModal();S.sel=A.date;render();offerCal(ev)}
 }
 
+/* ---------- 로그인 ---------- */
+function openLogin(){
+  $('#modal').innerHTML=`<div class="sheet-bg" data-act="close-bg"><form class="sheet" id="lf">
+    <h2>로그인</h2><p class="sub">전에 만든 아이디로 로그인하면 내 캐릭터와 신청 내역이 그대로 돌아와요.</p>
+    <div class="f"><label>아이디</label><input name="lid" autocapitalize="off" autocorrect="off" autocomplete="username" required></div>
+    <div class="f"><label>비밀번호</label><input name="lpw" type="password" autocomplete="current-password" required></div>
+    <p class="ferr" id="lfErr"></p>
+    <p class="hint">비밀번호를 잊었다면 길드장에게 이전 캐릭터를 지워 달라고 한 뒤 새로 등록해 주세요.</p>
+    <div class="acts"><button type="button" class="btn ghost" data-act="close">취소</button><button class="btn pri">로그인</button></div>
+  </form></div>`;
+  $('#lf').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);const btn=e.target.querySelector('button.pri');btn.disabled=true;
+    try{await signInWithEmailAndPassword(AUTH,toEmail(String(f.get('lid')).trim()),String(f.get('lpw')));toast('로그인했어요');setTimeout(()=>location.reload(),600)}
+    catch(x){console.error(x);$('#lfErr').textContent=authMsg(x);btn.disabled=false}};
+  setTimeout(()=>$('#lf [name=lid]')?.focus(),50);
+}
+
 /* ---------- 휴대폰 캘린더 (선택 기능) ---------- */
 const CAL_KEY='guild.cal';
 function calPref(){try{const p=JSON.parse(localStorage.getItem(CAL_KEY)||'{}');return{on:!!p.on,alarm:Number.isFinite(p.alarm)?p.alarm:30}}catch(_){return{on:false,alarm:30}}}
@@ -563,14 +620,15 @@ function offerCal(ev){if(ev&&calPref().on)setTimeout(()=>openCal(ev,true),400)}
 
 /* ---------- 길드장 / 삭제 ---------- */
 async function wipeUser(uid){
-  const del=async p=>{try{await p}catch(_){}};
+  let failed=0;const del=async p=>{try{await p}catch(e){console.error(e);failed++}};
   for(const e of S.events.filter(e=>e.by===uid&&joinsOf(e.id).every(j=>j.uid===uid))){
     await del(S.db.collection('events').doc(e.id).delete());
   }
   for(const j of S.joins.filter(j=>j.uid===uid))await del(S.db.collection('joins').doc(j._id).delete());
   for(const c of S.comments.filter(c=>c.uid===uid))await del(S.db.collection('comments').doc(c._id).delete());
   await del(S.db.collection('members').doc(safe(uid)).delete());
-  const m={...S.members};delete m[uid];S.members=m;
+  if(failed){toast('일부를 지우지 못했어요 — Firebase 규칙을 새것으로 바꿨는지 확인해 주세요');return false}
+  const m={...S.members};delete m[uid];S.members=m;return true;
 }
 function openMemberAdmin(u){
   const isA=S.admins.includes(u),n=nameOf(u);
@@ -590,7 +648,9 @@ function openHelp(){
   $('#modal').innerHTML=`<div class="sheet-bg" data-act="close-bg"><div class="sheet help">
     <h2>❓ 사용법</h2>
     <h3>🧙 처음 한 번</h3>
-    <p>오른쪽 위 <b>캐릭터 등록</b>에서 캐릭터명을 저장해요. 꼭 <b>홈 화면 아이콘</b>으로 열어서 쓰세요.</p>
+    <p><b>홈 화면에 추가</b>한 아이콘으로 열고, 오른쪽 위 <b>캐릭터 등록</b>에서 캐릭터명과 아이디를 만들어요. 링크로 열면 보기만 할 수 있어요.</p>
+    <h3>🔐 아이디</h3>
+    <p>캐릭터 등록 때 만든 아이디로 로그인하면, 앱을 다시 설치하거나 폰을 바꿔도 캐릭터가 그대로 돌아와요.</p>
     <h3>📅 캘린더로 신청</h3>
     <p>날짜 누르기 → <b>이 날 참여 신청</b> → 던전·시간 고르기. 같은 날·던전·시간 파티가 있으면 자동으로 합류해요.</p>
     <h3>💬 댓글로 신청</h3>
@@ -602,7 +662,7 @@ function openHelp(){
     <h3>📲 휴대폰 캘린더 (선택)</h3>
     <p><b>캐릭터 등록/수정</b> 화면에서 켜면, 참여한 파티를 휴대폰 캘린더에 알림과 함께 넣을 수 있어요. 파티가 바뀌거나 취소돼도 휴대폰 캘린더는 자동으로 바뀌지 않아요.</p>
     <h3>⚠️ 주의</h3>
-    <ul><li>앱을 지우거나 브라우저 데이터를 지우면 새 사람으로 인식돼요</li><li>길드 밖으로 주소를 공유하지 말아 주세요</li></ul>
+    <ul><li>아이디 없이 쓰다가 앱을 지우면 캐릭터를 되찾을 수 없어요. 아이디를 꼭 만들어 두세요</li><li>길드 밖으로 주소를 공유하지 말아 주세요</li></ul>
     <div class="acts" style="margin-top:16px"><button class="btn pri" data-act="close">닫기</button></div>
   </div></div>`;
 }
@@ -638,6 +698,8 @@ document.addEventListener('click',async e=>{
       }break}
     case'post':if(writable())needName(postComment);break;
     case'help':openHelp();break;
+    case'login':if(S.db&&S.browserOk)openLogin();break;
+    case'browser-ok':try{localStorage.setItem('guild.browser','1')}catch(_){}S.browserOk=true;render();break;
     case'cal':{const ev=S.events.find(x=>x.id===el.dataset.id);if(ev)openCal(ev);break}
     case'cal-ics':{const ev=S.events.find(x=>x.id===el.dataset.id);if(ev){downloadIcs(ev);closeModal()}break}
     case'cal-g':{const ev=S.events.find(x=>x.id===el.dataset.id);if(ev){openGoogle(ev);closeModal()}break}
@@ -652,13 +714,13 @@ document.addEventListener('click',async e=>{
       if(await guard(S.db.collection('meta').doc('admins').set({uids:next}),on?'길드장에서 해제했어요':'길드장으로 지정했어요')){S.admins=next;closeModal();render()}break}
     case'mdel':{
       if(delArm!=='m:'+el.dataset.u){delArm='m:'+el.dataset.u;el.classList.add('armed');el.textContent='한 번 더 누르면 삭제';setTimeout(()=>{if(delArm==='m:'+el.dataset.u){delArm=null;el.classList.remove('armed');el.textContent='이름과 참여 기록 삭제'}},3000);return}
-      delArm=null;el.disabled=true;await wipeUser(el.dataset.u);closeModal();toast('삭제했어요');render();break}
+      delArm=null;el.disabled=true;if(await wipeUser(el.dataset.u)){closeModal();toast('삭제했어요')}else el.disabled=false;render();break}
     case'delme':{
       if(S.admins.includes(S.uid)&&S.admins.length===1){toast('다른 길드장을 먼저 지정해 주세요');break}
       if(delArm!=='me'){delArm='me';el.classList.add('armed');el.textContent='한 번 더 누르면 모두 삭제돼요';setTimeout(()=>{if(delArm==='me'){delArm=null;el.classList.remove('armed');el.textContent='내 정보 삭제'}},3000);return}
       delArm=null;el.disabled=true;
       if(S.admins.includes(S.uid))await guard(S.db.collection('meta').doc('admins').set({uids:S.admins.filter(x=>x!==S.uid)}));
-      await wipeUser(S.uid);closeModal();toast('내 정보를 삭제했어요');render();break}
+      if(await wipeUser(S.uid)){closeModal();toast('내 정보를 삭제했어요')}else el.disabled=false;render();break}
     case'cdel':{
       if(delArm!==el.dataset.id){delArm=el.dataset.id;el.textContent='정말 삭제?';setTimeout(()=>{if(delArm===el.dataset.id){delArm=null;el.textContent='삭제'}},3000);return}
       delArm=null;await guard(S.db.collection('comments').doc(safe(el.dataset.id)).delete(),'댓글을 삭제했어요');break}
@@ -702,11 +764,11 @@ async function cleanupPast(){
   if(!cfg.firebase||!cfg.firebase.apiKey||/여기/.test(cfg.firebase.apiKey)){
     S.offline=true;S.offlineMsg='config.js에 Firebase 설정을 넣어야 해요. 설치 안내서의 3단계를 확인해주세요.';render();return}
   const app=initializeApp(cfg.firebase);
-  const auth=getAuth(app);
+  const auth=getAuth(app);AUTH=auth;EMAIL_DOMAIN=(cfg.firebase.projectId||'guild')+'.firebaseapp.com';S.browserOk=isStandalone()||browserFlag();
   let fs;try{fs=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})})}catch(_){fs=getFirestore(app)}
   if(auth.authStateReady)await auth.authStateReady();
   if(!auth.currentUser)await signInAnonymously(auth);
-  S.uid=auth.currentUser.uid;S.canWrite=true;S.isOwner=false;
+  S.uid=auth.currentUser.uid;S.isAnon=!!auth.currentUser.isAnonymous;S.canWrite=true;S.isOwner=false;
   S.db=makeDb(fs,'guilds/'+safe(cfg.guildCode||'guild')+'/');
   const slowT=setTimeout(()=>{S.slow=true;render()},10000);
   const pending=new Set(['members','events','joins','comments']);
