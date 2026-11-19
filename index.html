@@ -13,7 +13,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="길드 일정">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Gowun+Batang:wght@700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#f5efe3; --card:#fffdf8; --ink:#2a2832; --muted:#8a8172; --line:#e6ddcb;
@@ -158,6 +158,159 @@ nav.tabs button.on{color:var(--accent);font-weight:700}
 .acct{font-size:13px;background:var(--accent-soft);color:var(--accent);border-radius:10px;padding:10px 12px}
 .toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 76px);transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:10px;font-size:13px;z-index:30;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1}
+/* =========================================================
+   테마 공통 (A: 달빛 정원 / B: 자정의 서고)
+   ========================================================= */
+.crest,.ribbon,.crown,.hmoon,#bgfx{display:none}
+body.theme-a,body.theme-b{background:transparent}
+html.themed{background:#2b3a92}
+.theme-a #bgfx,.theme-b #bgfx{display:block;position:fixed;inset:0;z-index:-1;background:#2b3a92 var(--bgimg) center top/cover no-repeat}
+.theme-a #bgfx::after,.theme-b #bgfx::after{content:"";position:absolute;inset:0}
+.theme-a .crest,.theme-b .crest{display:flex;align-items:center;justify-content:center;gap:6px;margin:2px 0 6px;pointer-events:none}
+.crest svg{width:46px;height:46px;filter:drop-shadow(0 0 8px rgba(255,255,255,.8))}
+.crest span{font-family:"Great Vibes",cursive;font-size:46px;line-height:1;color:#fff;text-shadow:0 0 10px rgba(255,255,255,.75),0 0 24px rgba(170,180,255,.9)}
+.theme-a .crown,.theme-b .crown{display:inline;margin-right:3px;font-style:normal}
+.theme-a .pp.slot::before,.theme-b .pp.slot::before{content:"+ "}
+.theme-a header h1,.theme-b header h1{color:#fff;text-shadow:0 1px 2px rgba(10,14,60,.9),0 2px 12px rgba(20,25,90,.8)}
+.theme-a header h1 small,.theme-b header h1 small{color:#fff;text-shadow:0 1px 2px rgba(10,14,60,.95),0 0 8px rgba(10,14,60,.8)}
+.theme-a .dc,.theme-b .dc{transition:transform .12s}
+.theme-a .dc:active,.theme-b .dc:active{transform:scale(.96)}
+.theme-a .hmoon,.theme-b .hmoon{display:inline-block;width:22px;height:22px;margin-right:6px;vertical-align:-3px;border-radius:50%;box-shadow:-6px 3px 0 0 #fff inset;transform:rotate(-20deg);filter:drop-shadow(0 0 6px rgba(255,255,255,.9))}
+
+/* =========================================================
+   A. 달빛 정원 — 보내주신 시안 기반 (밝은 유리 + 금빛 테두리)
+   ========================================================= */
+body.theme-a{
+  --ink:#1d2260; --muted:#5b61a3; --card:rgba(242,240,255,.78); --line:rgba(120,130,220,.22); --bg:rgba(255,255,255,.6);
+  --accent:#3b4cc8; --accent-soft:rgba(80,100,230,.16); --gold:#c99a3f; --gold-soft:rgba(255,243,215,.85); --danger:#d8344a;
+  --glenn:#2c66e0; --glenn-soft:#dbe6ff; --bri:#9442d6; --bri-soft:#f0e0ff; --etc:#6b6f9e; --etc-soft:#e6e6f5;
+  --frame:rgba(244,218,160,.95);
+}
+.theme-a #bgfx::after{background:linear-gradient(180deg,rgba(18,24,90,.55) 0%,rgba(18,24,90,.28) 14%,rgba(20,30,100,.05) 26%,rgba(30,40,130,.18) 50%,rgba(25,32,110,.32) 100%)}
+.theme-a .me-chip,.theme-a .help-btn{background:rgba(255,255,255,.88);border:1.5px solid var(--frame);color:var(--ink);box-shadow:0 2px 10px rgba(20,30,110,.25)}
+.theme-a .legend{gap:8px}
+.theme-a .legend span{background:rgba(25,32,110,.55);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:5px 12px 5px 9px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.theme-a .legend span::before{width:11px;height:11px;border-radius:50%;box-shadow:0 0 6px var(--c)}
+.theme-a .cal{position:relative;margin-top:16px;padding:14px 10px 12px;border-radius:24px;background:rgba(222,226,255,.42);
+  border:1.5px solid var(--frame);box-shadow:0 0 0 4px rgba(255,255,255,.14),0 0 0 5.5px rgba(244,218,160,.55),0 10px 30px rgba(15,20,80,.35);
+  backdrop-filter:blur(14px) saturate(1.2);-webkit-backdrop-filter:blur(14px) saturate(1.2)}
+.theme-a .cal::before{content:"";position:absolute;left:50%;top:-22px;width:44px;height:44px;transform:translateX(-50%);
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3Cmask id='m'%3E%3Crect width='100' height='100' fill='white'/%3E%3Ccircle cx='63' cy='38' r='31' fill='black'/%3E%3C/mask%3E%3C/defs%3E%3Ccircle cx='46' cy='52' r='36' fill='white' mask='url(%23m)'/%3E%3Cpath d='M76 22 l2.5 -8 l2.5 8 l8 2.5 l-8 2.5 l-2.5 8 l-2.5 -8 l-8 -2.5z' fill='white'/%3E%3C/svg%3E") center/64% no-repeat,radial-gradient(circle at 40% 35%,#4a55d0,#1f2570);
+  border-radius:50%;box-shadow:0 0 0 1.5px var(--frame),0 0 16px rgba(255,255,255,.9)}
+.theme-a .calnav{background:rgba(28,36,120,.55);border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:4px 6px;margin:8px 0 10px}
+.theme-a .calnav .lbl{color:#fff;font-size:21px;text-shadow:0 0 10px rgba(180,190,255,.9)}
+.theme-a .calnav .lbl::before{content:"❦ ";color:var(--frame);font-size:15px}
+.theme-a .calnav .lbl::after{content:" ❦";color:var(--frame);font-size:15px;display:inline-block;transform:scaleX(-1)}
+.theme-a .iconbtn{color:#fff;font-size:26px}
+.theme-a .today-btn{color:#fff;border-color:rgba(255,255,255,.5)}
+.theme-a .wk{gap:5px}
+.theme-a .wk .h{background:rgba(255,255,255,.75);border-radius:10px;padding:6px 0;margin-bottom:2px;color:var(--ink);font-size:13px}
+.theme-a .wk .h.sun{color:var(--danger)}.theme-a .wk .h.sat{color:var(--glenn)}
+.theme-a .dc{min-height:66px;border-radius:13px;padding:5px 4px;background:linear-gradient(160deg,rgba(255,255,255,.9),rgba(226,229,255,.7));
+  border:1px solid rgba(255,255,255,.95);box-shadow:inset 0 1px 0 #fff,0 3px 8px rgba(30,40,130,.14)}
+.theme-a .dc .num{font-size:14px;color:var(--ink)}
+.theme-a .dc.sun .num{color:var(--danger)}.theme-a .dc.sat .num{color:var(--glenn)}
+.theme-a .dc.out{opacity:.45}
+.theme-a .dc.today .num{background:var(--accent)}
+.theme-a .dc.mine{background:linear-gradient(160deg,rgba(255,250,235,.95),rgba(240,228,255,.8));border-color:var(--frame)}
+.theme-a .dc.sel{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3Cmask id='m'%3E%3Crect width='100' height='100' fill='white'/%3E%3Ccircle cx='63' cy='38' r='31' fill='black'/%3E%3C/mask%3E%3C/defs%3E%3Ccircle cx='46' cy='52' r='36' fill='white' mask='url(%23m)'/%3E%3Cpath d='M76 22 l2.5 -8 l2.5 8 l8 2.5 l-8 2.5 l-2.5 8 l-2.5 -8 l-8 -2.5z' fill='white'/%3E%3C/svg%3E") right 3px top 3px/20px no-repeat,linear-gradient(160deg,#4246c4,#24267e);
+  border:1.5px solid rgba(255,255,255,.9);box-shadow:0 0 0 2px rgba(150,160,255,.6),0 0 16px rgba(140,150,255,.95)}
+.theme-a .dc.sel .num{color:#fff;background:none}
+.theme-a .dc.sel .bar{background:rgba(255,255,255,.2)!important;color:#fff!important}
+.theme-a .bar{background:var(--c);color:#fff;border-radius:6px;padding:1px 4px;font-size:10px}
+.theme-a .panel h2{color:#fff;font-family:"Gowun Batang",serif;font-size:20px;text-shadow:0 2px 8px rgba(20,25,90,.6);padding:4px 2px}
+.theme-a .panel h2 small{color:#fff;font-size:13px}
+.theme-a .panel h2 small:not(:empty)::before{content:"⚔ "}
+.theme-a .empty,.theme-a .note{color:rgba(255,255,255,.9);text-shadow:0 1px 4px rgba(20,25,90,.6)}
+.theme-a .ev{position:relative;background:rgba(242,240,255,.82);border:1.5px solid var(--frame);border-radius:20px;padding:14px 14px 14px 50px;
+  box-shadow:0 0 0 3px rgba(255,255,255,.12),0 8px 22px rgba(15,20,80,.3);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.theme-a .ev.mine{border-color:var(--frame);box-shadow:0 0 0 3px rgba(255,255,255,.25),0 0 18px rgba(170,180,255,.8)}
+.theme-a .ribbon{display:block;position:absolute;left:12px;top:-3px;width:28px;height:58px;background:linear-gradient(180deg,#2d3796,#1c2266);
+  border:1.5px solid var(--frame);border-top:0;clip-path:polygon(0 0,100% 0,100% 100%,50% 82%,0 100%)}
+.theme-a .ribbon::after{content:"⚖";position:absolute;left:0;right:0;top:12px;text-align:center;color:var(--frame);font-size:14px}
+.theme-a .ev-name{font-family:"Gowun Batang",serif;font-size:19px;color:var(--ink)}
+.theme-a .ev-name::before{content:"⚔ ";color:var(--c)}
+.theme-a .ev-time{font-size:17px;color:var(--ink)}
+.theme-a .ev-count{background:rgba(70,90,220,.18);color:var(--accent);border-radius:999px;padding:3px 10px}
+.theme-a .ppl{gap:7px;margin-top:11px}
+.theme-a .pp{background:linear-gradient(180deg,#4c6af2,#2f41c4);color:#fff;font-weight:700;padding:5px 12px;box-shadow:0 0 8px rgba(80,110,255,.55)}
+.theme-a .pp.slot{background:rgba(255,255,255,.55);border:1.5px dashed rgba(110,120,210,.55);color:var(--ink);box-shadow:none;font-weight:500}
+.theme-a .btn.pri{background:linear-gradient(180deg,#4f63e8,#2e3cb8);box-shadow:0 0 12px rgba(80,100,255,.55)}
+.theme-a .btn.sec{background:rgba(255,255,255,.8);border:1px solid rgba(110,120,210,.35)}
+.theme-a .btn.big{border:1.5px solid var(--frame)}
+.theme-a nav.tabs{background:rgba(26,32,110,.78);border-top:1.5px solid var(--frame);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.theme-a nav.tabs button{color:rgba(255,255,255,.75)}
+.theme-a nav.tabs button.on{color:#fff;margin:6px 10px 4px;border-radius:16px;border:1.5px solid var(--frame);background:rgba(110,120,255,.28);box-shadow:0 0 14px rgba(160,170,255,.8)}
+.theme-a .card,.theme-a .composer{background:rgba(242,240,255,.84);border:1.5px solid var(--frame);border-radius:20px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.theme-a .banner{background:rgba(255,246,225,.9);border:1.5px solid var(--frame)}
+.theme-a .sheet{background:rgba(244,242,255,.97);border-top:2px solid var(--frame)}
+.theme-a .toast{background:#262c8a;color:#fff}
+
+/* =========================================================
+   B. 자정의 서고 — 어두운 밤하늘 유리 + 얇은 금선 (자체 디자인)
+   ========================================================= */
+body.theme-b{
+  --ink:#eef0ff; --muted:#a6acdc; --card:rgba(16,20,60,.72); --line:rgba(200,190,255,.16); --bg:rgba(255,255,255,.06);
+  --accent:#a9bbff; --accent-soft:rgba(150,170,255,.16); --gold:#e9cd8c; --gold-soft:rgba(233,205,140,.13); --danger:#ff8c9b;
+  --glenn:#8db6ff; --glenn-soft:rgba(110,150,255,.2); --bri:#df9fff; --bri-soft:rgba(200,130,255,.2); --etc:#b0b4d8; --etc-soft:rgba(255,255,255,.08);
+  --hair:rgba(233,205,140,.45);
+}
+.theme-b #bgfx::after{background:linear-gradient(180deg,rgba(8,10,40,.62) 0%,rgba(8,10,40,.38) 14%,rgba(8,10,40,.62) 30%,rgba(6,8,32,.82) 100%)}
+.theme-b .crest{justify-content:flex-start;margin:0 0 2px 2px}
+.theme-b .crest svg{width:34px;height:34px}
+.theme-b .crest span{font-size:36px}
+.theme-b .me-chip,.theme-b .help-btn{background:rgba(14,18,56,.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid var(--hair);color:var(--ink)}
+.theme-b .me-chip b{color:var(--gold)}
+.theme-b .legend{gap:8px}
+.theme-b .legend span{color:var(--ink);background:rgba(14,18,56,.6);border:1px solid var(--line);border-radius:999px;padding:4px 11px 4px 8px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.theme-b .legend span::before{border-radius:50%;box-shadow:0 0 8px var(--c)}
+.theme-b .cal{position:relative;background:rgba(14,18,56,.66);border:1px solid var(--hair);border-radius:22px;padding:12px 8px 10px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 12px 30px rgba(0,0,20,.45);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.theme-b .cal::before{content:"✦";position:absolute;left:50%;top:-11px;transform:translateX(-50%);color:var(--gold);font-size:16px;background:#141a4a;padding:0 8px;border-radius:10px;text-shadow:0 0 8px rgba(233,205,140,.9)}
+.theme-b .calnav .lbl{color:var(--ink);font-size:20px;letter-spacing:.5px}
+.theme-b .iconbtn{color:var(--gold)}
+.theme-b .wk .h{color:var(--muted);letter-spacing:1px}
+.theme-b .wk .h.sun{color:var(--danger)}.theme-b .wk .h.sat{color:var(--glenn)}
+.theme-b .dc{min-height:64px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)}
+.theme-b .dc .num{color:var(--ink);font-weight:500}
+.theme-b .dc.sun .num{color:var(--danger)}.theme-b .dc.sat .num{color:var(--glenn)}
+.theme-b .dc.out{opacity:.3}
+.theme-b .dc.past .num{color:rgba(238,240,255,.45)}
+.theme-b .dc.today .num{background:var(--gold);color:#1a1d4a;border-radius:50%;width:22px;height:22px;display:grid;place-items:center;padding:0}
+.theme-b .dc.mine{background:rgba(169,187,255,.1);border-color:rgba(169,187,255,.3)}
+.theme-b .dc.sel{border:1px solid var(--gold);box-shadow:0 0 0 1px var(--gold) inset,0 0 18px rgba(233,205,140,.35);background:rgba(233,205,140,.08)}
+.theme-b .bar{background:transparent;color:var(--c);padding:0 2px;font-weight:700}
+.theme-b .bar::before{content:"●";font-size:7px;vertical-align:2px;margin-right:2px;text-shadow:0 0 6px var(--c)}
+.theme-b .panel h2{color:var(--ink);font-family:"Gowun Batang",serif;font-size:19px}
+.theme-b .panel h2 small{color:var(--gold)}
+.theme-b .hmoon{box-shadow:-5px 3px 0 0 var(--gold) inset;filter:drop-shadow(0 0 5px rgba(233,205,140,.8))}
+.theme-b .ev{background:rgba(14,18,56,.72);border:1px solid var(--line);border-left:3px solid var(--c);border-radius:16px;
+  box-shadow:-6px 0 16px -8px var(--c),0 8px 20px rgba(0,0,20,.35);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.theme-b .ev.mine{border-color:var(--hair);border-left-color:var(--c)}
+.theme-b .ev-name{font-family:"Gowun Batang",serif;font-size:18px}
+.theme-b .ev-time{color:var(--gold);font-size:15px}
+.theme-b .ev-count{border:1px solid var(--line);border-radius:999px;padding:2px 9px}
+.theme-b .pp{background:var(--cs);color:#fff;border:1px solid color-mix(in srgb,var(--c) 60%,transparent);padding:4px 11px}
+.theme-b .pp.slot{background:transparent;border:1px dashed rgba(255,255,255,.2);color:var(--muted)}
+.theme-b .btn.pri{background:linear-gradient(180deg,#e9cd8c,#c9a55a);color:#1b1e4c}
+.theme-b .btn.sec{background:rgba(255,255,255,.1);color:var(--ink)}
+.theme-b .btn.cal{background:var(--gold-soft);color:var(--gold)}
+.theme-b nav.tabs{left:14px;right:14px;bottom:calc(env(safe-area-inset-bottom) + 10px);padding-bottom:0;border-radius:22px;background:rgba(14,18,56,.82);
+  border:1px solid var(--hair);box-shadow:0 10px 30px rgba(0,0,20,.5);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.theme-b .wrap{padding-bottom:calc(env(safe-area-inset-bottom) + 100px)}
+.theme-b nav.tabs button{color:var(--muted);position:relative}
+.theme-b nav.tabs button.on{color:var(--gold)}
+.theme-b nav.tabs button.on::after{content:"";position:absolute;bottom:4px;width:5px;height:5px;border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gold)}
+.theme-b .card,.theme-b .composer{background:rgba(14,18,56,.72);border:1px solid var(--line);border-radius:18px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.theme-b .banner{background:rgba(233,205,140,.12);border:1px solid var(--hair);color:var(--ink)}
+.theme-b .banner button{color:#1b1e4c}
+.theme-b .sheet{background:rgba(18,22,64,.97);border-top:1px solid var(--hair)}
+.theme-b .sheet-bg{background:rgba(4,6,24,.6)}
+.theme-b .f select,.theme-b .f input,.theme-b .f textarea,.theme-b .composer textarea{color:var(--ink)}
+.theme-b option{color:#111}
+.theme-b .chips button.on{background:var(--gold);border-color:var(--gold);color:#1b1e4c}
+.theme-b .toast{background:var(--gold);color:#1b1e4c}
+.theme-b .detect.ok{color:#cfe0ff}
 </style>
 </head>
 <body>
@@ -194,6 +347,15 @@ nav.tabs button.on{color:var(--accent);font-weight:700}
   st.style.setProperty('--tw',p(C.t[2]-C.t[0],C.w));st.style.setProperty('--th',p(C.t[3]-C.t[1],C.h));
   st.style.setProperty('--kw',(C.k/(C.t[2]-C.t[0])*100)+'%');
   document.getElementById('spImg').src=C.src;
+  // 화면 테마 (이 휴대폰에 저장)
+  window.applyTheme=function(t){
+    var b=document.body;b.classList.remove('theme-a','theme-b');if(t==='a'||t==='b')b.classList.add('theme-'+t);
+    document.documentElement.classList.toggle('themed',t==='a'||t==='b');
+    b.style.setProperty('--bgimg','url('+(ios?'bg-ios.jpg':'bg-android.jpg')+')');
+    var m=document.querySelector('meta[name=theme-color]');if(m)m.content=t==='b'?'#141a4a':t==='a'?'#2b3a92':'#2f6f62';
+  };
+  var th='a';try{th=localStorage.getItem('guild.theme')||'a'}catch(e){}
+  window.applyTheme(th);
   var fill=document.getElementById('spFill'),knob=document.getElementById('spKnob'),el=document.getElementById('splash');
   var cur=0,tgt=6,cap=22,done=false,t0=Date.now(),MIN=1200,gone=false;
   function draw(v){fill.style.width=v+'%';knob.style.left=v+'%'}
@@ -211,7 +373,9 @@ nav.tabs button.on{color:var(--accent);font-weight:700}
   setTimeout(function(){window.SPLASH.finish()},12000); // 너무 오래 걸리면 그냥 넘어가기
 })();
 </script>
+<div id="bgfx"></div>
 <div class="wrap">
+  <div class="crest" aria-hidden="true"><svg viewBox="0 0 100 100"><defs><mask id="crM"><rect width="100" height="100" fill="#fff"/><circle cx="62" cy="40" r="32" fill="#000"/></mask></defs><circle cx="46" cy="52" r="36" fill="#fff" mask="url(#crM)"/><path d="M74 26 l2.5 -8 l2.5 8 l8 2.5 l-8 2.5 l-2.5 8 l-2.5 -8 l-8 -2.5z" fill="#fff"/></svg><span>Selene</span></div>
   <header>
     <h1>⚔️ 길드 사냥 일정<small>글렌 베르나 · 브리레흐 파티 모집</small></h1>
     <div class="hdr-btns"><button class="help-btn" data-act="help" aria-label="도움말">❓</button><button class="me-chip" data-act="profile" id="meChip">캐릭터 등록</button></div>
@@ -464,7 +628,7 @@ function renderCal(){
   h+=`</div></div>`;
   if(!S.loaded&&S.db)return h+`<div class="note">일정을 불러오는 중…</div>`;
   const evs=evsOn(S.sel),past=S.sel<todayS;
-  h+=`<section class="panel"><h2>${dlabel(S.sel)}<small>${evs.length?`파티 ${evs.length}개`:''}</small></h2>`;
+  h+=`<section class="panel"><h2><span><i class="hmoon"></i>${dlabel(S.sel)}</span><small>${evs.length?`파티 ${evs.length}개`:''}</small></h2>`;
   h+=evs.length?evs.map(eventCard).join(''):`<div class="empty">${past?'지난 날짜예요':'아직 모집이 없어요. 첫 번째로 신청해 보세요!'}</div>`;
   if(writable()&&!past)h+=`<button class="btn pri big" data-act="apply" data-k="${S.sel}">＋ 이 날 참여 신청</button>`;
   h+=`</section>`;
@@ -476,12 +640,12 @@ function eventCard(ev){
   const mine=js.some(j=>j.uid===S.uid),full=js.length>=max,past=evEnd(ev).getTime()<Date.now();
   const canDel=writable()&&(ev.by===S.uid||S.isOwner);
   const empties=Math.max(0,Math.min(max-js.length,8));
-  return `<article class="ev ${mine?'mine':''} ${past?'past':''}" style="${cvars(d)}">
+  return `<article class="ev ${mine?'mine':''} ${past?'past':''}" style="${cvars(d)}"><span class="ribbon" aria-hidden="true"></span>
     <div class="ev-top"><div class="ev-name">${esc(d.key)}</div><div class="ev-time">${esc(ev.time||'시간 미정')}</div>
       <div class="ev-count ${full?'full':''}">${js.length}/${max}</div></div>
     ${ev.memo?`<div class="ev-memo">${esc(ev.memo)}</div>`:''}
     <div class="ppl">${js.map(j=>{const kick=S.isOwner&&writable()&&!past&&j.uid!==S.uid;
-      return `<span class="pp ${kick?'kick':''}" ${kick?`data-act="kick" data-id="${esc(j._id)}"`:''}>${esc(nameOf(j.uid))}${S.members[j.uid]?.cls?` · ${esc(S.members[j.uid].cls)}`:''}</span>`}).join('')}${'<span class="pp slot">빈자리</span>'.repeat(empties)}</div>
+      return `<span class="pp ${kick?'kick':''}" ${kick?`data-act="kick" data-id="${esc(j._id)}"`:''}>${j.uid===ev.by?'<i class="crown">👑</i>':''}${esc(nameOf(j.uid))}${S.members[j.uid]?.cls?` · ${esc(S.members[j.uid].cls)}`:''}</span>`}).join('')}${'<span class="pp slot">빈자리</span>'.repeat(empties)}</div>
     ${writable()&&(!past||canDel)?`<div class="ev-actions">
       ${past?'':mine?`<button class="btn sec" data-act="leave" data-id="${esc(ev.id)}">참여 취소</button>`
         :`<button class="btn pri" data-act="join" data-id="${esc(ev.id)}" ${full?'disabled':''}>${full?'모집 완료':'참여하기'}</button>`}
@@ -528,6 +692,9 @@ function openProfile(after){
       ${m.name?'':`<p class="hint">이미 아이디가 있나요? <button type="button" class="linkish" style="color:var(--accent);text-decoration:underline" data-act="login">로그인하기</button></p>`}`
       :`<div class="acct">로그인 아이디: <b>${esc(loginId())}</b> · 다른 폰에서도 이 아이디로 로그인할 수 있어요.</div>`}
     </div>
+    <div class="sect"><h3>🎨 화면 테마</h3>
+      <div class="chips" id="themePick">${[['a','🌙 달빛 정원'],['b','✦ 자정의 서고'],['basic','기본']].map(([v,t])=>`<button type="button" data-act="theme" data-v="${v}" class="${curTheme()===v?'on':''}">${t}</button>`).join('')}</div>
+      <p class="hint" style="margin-top:8px">누르면 바로 바뀌어요. 이 휴대폰에만 적용돼요.</p></div>
     <div class="sect"><h3>📲 휴대폰 캘린더</h3>
       <label class="sw"><span>참여한 파티를 내 캘린더에 추가하는<br>버튼 보이기</span><input type="checkbox" name="calOn" ${calPref().on?'checked':''}></label>
       <div class="f" style="margin-top:10px"><label>캘린더 알림</label><select name="calAlarm">${[[0,'알림 없음'],[10,'10분 전'],[30,'30분 전'],[60,'1시간 전'],[120,'2시간 전']].map(([v,t])=>`<option value="${v}" ${calPref().alarm===v?'selected':''}>${t}</option>`).join('')}</select></div>
@@ -604,6 +771,9 @@ async function applyTo(date,dungeon,time,memo,okMsg){
 async function submitApply(memo){
   const ev=await applyTo(A.date,A.dungeon,A.time,memo,`${dun(A.dungeon).key} 신청 완료!`);if(ev){closeModal();S.sel=A.date;render();offerCal(ev)}
 }
+
+/* ---------- 화면 테마 ---------- */
+function curTheme(){try{return localStorage.getItem('guild.theme')||'a'}catch(_){return 'a'}}
 
 /* ---------- 로그인 ---------- */
 function openLogin(){
@@ -748,6 +918,8 @@ document.addEventListener('click',async e=>{
       }break}
     case'post':if(writable())needName(postComment);break;
     case'help':openHelp();break;
+    case'theme':{const v=el.dataset.v;try{localStorage.setItem('guild.theme',v)}catch(_){}window.applyTheme&&applyTheme(v);
+      document.querySelectorAll('#themePick button').forEach(b=>b.classList.toggle('on',b===el));break}
     case'login':if(S.db&&S.browserOk)openLogin();break;
     case'browser-ok':try{localStorage.setItem('guild.browser','1')}catch(_){}S.browserOk=true;render();break;
     case'cal':{const ev=S.events.find(x=>x.id===el.dataset.id);if(ev)openCal(ev);break}
