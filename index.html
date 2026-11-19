@@ -369,11 +369,14 @@ header .swords{width:30px;height:30px;vertical-align:-6px;margin-right:4px;filte
 
 /* ---- 날짜 칸 크기: 시안처럼 거의 정사각형 (내용이 많으면 자동으로 늘어남) ---- */
 .wk{grid-template-columns:repeat(7,minmax(0,1fr))}
-.theme-a .dc,.theme-b .dc{min-height:0;min-width:0;aspect-ratio:1/1.06;gap:1px;padding:4px 2px 3px}
+.theme-a .wk,.theme-b .wk{container-type:inline-size}
+.theme-a .dc,.theme-b .dc{min-width:0;min-height:calc((100cqw - 24px) / 7 * 1.06);gap:2px;padding:4px 2px 4px}
+@supports not (width:1cqw){.theme-a .dc,.theme-b .dc{min-height:48px}}
+.theme-a .dc .num,.theme-b .dc .num{line-height:1.15}
 .theme-a .cal,.theme-b .cal{padding-left:7px;padding-right:7px}
 .theme-a .wk,.theme-b .wk{gap:4px}
 .theme-a .dc .num,.theme-b .dc .num{padding-left:3px}
-.theme-a .dc .bar,.theme-b .dc .bar{font-size:9.5px;letter-spacing:-.4px;padding:1px 2px;text-align:center;text-overflow:clip}
+.theme-a .dc .bar,.theme-b .dc .bar{flex-shrink:0;font-size:9.5px;line-height:1.35;letter-spacing:-.4px;padding:1px 2px;text-align:center;text-overflow:clip}
 .theme-b .dc .bar::before{display:none}
 .theme-b .dc .bar{background:var(--cs);border-radius:5px;color:#fff}
 .theme-a .dc .bar,.theme-b .dc .bar{line-height:1.25}
